@@ -1,6 +1,8 @@
 package com.svwh.tools.core.designsystem.component
 
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -16,6 +18,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 @Composable
 fun SToolScaffold(
     title: String,
+    onBackClick: (() -> Unit)? = null,
     actionIcon: ImageVector? = null,
     actionContentDescription: String? = null,
     onActionClick: (() -> Unit)? = null,
@@ -25,6 +28,16 @@ fun SToolScaffold(
         topBar = {
             TopAppBar(
                 title = { Text(text = title) },
+                navigationIcon = {
+                    if (onBackClick != null) {
+                        IconButton(onClick = onBackClick) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "返回",
+                            )
+                        }
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surface,
                 ),

@@ -1,5 +1,8 @@
 package com.svwh.tools.core.navigation
 
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -19,19 +22,76 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import com.svwh.tools.core.datastore.UserSettings
 import com.svwh.tools.feature.environment.presentation.EnvironmentRoute
 import com.svwh.tools.feature.noenvironment.presentation.NoEnvironmentRoute
+import com.svwh.tools.feature.noenvironment.presentation.repack.RepackAppListRoute
 import com.svwh.tools.feature.settings.presentation.SettingsRoute
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun AppNavHost(
     startupSettings: UserSettings,
     modifier: Modifier = Modifier,
 ) {
-    val tabs = remember {
+    val navController = rememberNavController()
+
+    NavHost(
+        navController = navController,
+        startDestination = AppDestination.MAIN,
+        modifier = modifier,
+    ) {
+        composable(AppDestination.MAIN) {
+            MainTabsScreen(
+                startupSettings = startupSettings,
+                onNavigateToRepackAppList = {
+                    navController.navigate(AppDestination.REPACK_APP_LIST)
+                },
+            )
+        }
+        composable(
+            route = AppDestination.REPACK_APP_LIST,
+            enterTransition = {
+                slideInHorizontally(
+                    animationSpec = tween(300),
+                    initialOffsetX = { fullWidth -> fullWidth },
+                )
+            },
+            exitTransition = {
+                slideOutHorizontally(
+                    animationSpec = tween(300),
+                    targetOffsetX = { fullWidth -> -fullWidth / 3 },
+                )
+            },
+            popEnterTransition = {
+                slideInHorizontally(
+                    animationSpec = tween(300),
+                    initialOffsetX = { fullWidth -> -fullWidth / 3 },
+                )
+            },
+            popExitTransition = {
+                slideOutHorizontally(
+                    animationSpec = tween(300),
+                    targetOffsetX = { fullWidth -> fullWidth },
+                )
+            },
+        ) {
+            RepackAppListRoute()
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun MainTabsScreen(
+    startupSettings: UserSettings,
+    onNavigateToRepackAppList: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val tabs = remember(startupSettings) {
         AppRoute.bottomTabs(
             showNoEnvironment = startupSettings.showNoEnvironmentTab,
             showEnvironment = startupSettings.showEnvironmentTab,
@@ -71,9 +131,12 @@ fun AppNavHost(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues),
+            beyondViewportPageCount = 1,
         ) { page ->
             when (val tab = tabs[page]) {
-                AppRoute.NoEnvironment -> NoEnvironmentRoute()
+                AppRoute.NoEnvironment -> NoEnvironmentRoute(
+                    onNavigateToRepackAppList = onNavigateToRepackAppList,
+                )
                 AppRoute.Environment -> EnvironmentRoute()
                 AppRoute.Settings -> SettingsRoute()
                 else -> TabTextPage(tab = tab)

@@ -39,6 +39,7 @@ import com.svwh.tools.feature.environment.presentation.SearchField
 
 @Composable
 fun NoEnvironmentRoute(
+    onNavigateToRepackAppList: () -> Unit,
     viewModel: NoEnvironmentViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -47,7 +48,7 @@ fun NoEnvironmentRoute(
         uiState = uiState,
         onSearchQueryChange = viewModel::setSearchQuery,
         onHookEnabledChange = viewModel::setHookEnabled,
-        onAddClick = {},
+        onAddClick = onNavigateToRepackAppList,
     )
 }
 
