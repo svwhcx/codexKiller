@@ -26,18 +26,30 @@ import com.svwh.tools.feature.environment.presentation.ListContainer
 import com.svwh.tools.feature.environment.presentation.SearchField
 import com.svwh.tools.feature.noenvironment.presentation.components.InstalledAppRepackRow
 import com.svwh.tools.feature.noenvironment.presentation.components.RepackListTopBar
+import com.svwh.tools.feature.noenvironment.presentation.repack.progress.RepackProgressSheetHost
 
 @Composable
 fun RepackAppListRoute(
     viewModel: RepackAppListViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val repackProgressState by viewModel.repackProgressState.collectAsStateWithLifecycle()
 
-    RepackAppListScreen(
-        uiState = uiState,
-        onSearchQueryChange = viewModel::setSearchQuery,
-        onRepackClick = viewModel::onRepackClick,
-    )
+    Box(modifier = Modifier.fillMaxSize()) {
+        RepackAppListScreen(
+            uiState = uiState,
+            onSearchQueryChange = viewModel::setSearchQuery,
+            onRepackClick = viewModel::onRepackClick,
+        )
+
+        RepackProgressSheetHost(
+            state = repackProgressState,
+            onDismiss = viewModel::dismissRepackProgress,
+            onStop = viewModel::stopRepackProgress,
+            onInstall = viewModel::installRepackResult,
+            onDetails = viewModel::showRepackDetails,
+        )
+    }
 }
 
 @Composable
@@ -126,6 +138,7 @@ private fun RepackAppListCard(
                     uiState.filteredApps.forEach { app ->
                         InstalledAppRepackRow(
                             app = app,
+                            onItemClick = { onRepackClick(app.packageName) },
                             onRepackClick = onRepackClick,
                         )
                     }

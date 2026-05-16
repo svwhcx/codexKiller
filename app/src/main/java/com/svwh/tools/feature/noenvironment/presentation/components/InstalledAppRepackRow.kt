@@ -45,6 +45,7 @@ private val RepackActionWidth = 72.dp
 @Composable
 fun InstalledAppRepackRow(
     app: InstalledAppItem,
+    onItemClick: () -> Unit,
     onRepackClick: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -64,6 +65,7 @@ fun InstalledAppRepackRow(
             Row(
                 modifier = Modifier
                     .weight(1f)
+                    .clickable(onClick = onItemClick)
                     .padding(start = 9.dp, top = 8.dp, end = 10.dp, bottom = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
