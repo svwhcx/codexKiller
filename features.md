@@ -62,3 +62,20 @@
 - 读取已安装应用列表没有 Android 运行时权限弹窗；Android 11+ 依赖 `QUERY_ALL_PACKAGES` 和 `<queries>` 包可见性声明。
 - `QUERY_ALL_PACKAGES` 已声明用于完整读取应用列表；如面向应用商店分发，需要单独评估平台政策。
 - 应用列表页面不展示权限说明卡片；真正需要运行时授权的后续功能统一接入 `core/permission`。
+
+## 无环境：重打包应用列表
+
+`无环境` 页面用于后续无 LSPosed/无运行环境场景：
+
+- 顶部使用绿色说明条，固定展示 `无环境可重打包 App 后执行有环境相似功能。`
+- 页面 UI 与 `有环境` 保持一致：搜索栏、白色列表 card、应用图标、名称、包名、Hook 开关和行内 loading。
+- 当前先加载用户已安装应用，不包含系统应用。
+- 搜索框支持按应用名称或包名过滤。
+- 搜索框右侧为 `添加` 按钮；点击后预留跳转到“选择已安装用户应用”页面，目标页面后续实现。
+- 后续添加功能需要读取已安装应用 Manifest meta-data，根据配置过滤可添加应用。
+
+实现约定：
+
+- 页面入口位于 `feature/noenvironment/presentation/NoEnvironmentScreen.kt`。
+- 当前复用 `InstalledAppRepository` 加载用户应用。
+- 通用应用列表 UI 复用 `feature/environment/presentation` 中的搜索框、应用项、Hook 开关和 loading 组件。

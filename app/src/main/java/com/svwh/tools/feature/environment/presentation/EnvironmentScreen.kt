@@ -53,10 +53,13 @@ private val SuccessContainer = Color(0xFFE7F5E9)
 private val WarningRed = Color(0xFFC62828)
 private val WarningContainerStart = Color(0xFFFFF0F1)
 private val WarningContainerEnd = Color(0xFFFFE1E4)
-private val SearchContainer = Color(0xFFF4F6FA)
-private val ListContainer = Color(0xFFFFFFFF)
-private val SwitchTrackOff = Color(0xFFE3E5E9)
-private val SwitchThumb = Color(0xFFFFFFFF)
+internal val NoEnvironmentGreen = Color(0xFF1B7F5A)
+internal val NoEnvironmentContainerStart = Color(0xFFE8F7EF)
+internal val NoEnvironmentContainerEnd = Color(0xFFDDF3E8)
+internal val SearchContainer = Color(0xFFF4F6FA)
+internal val ListContainer = Color(0xFFFFFFFF)
+internal val SwitchTrackOff = Color(0xFFE3E5E9)
+internal val SwitchThumb = Color(0xFFFFFFFF)
 
 @Composable
 fun EnvironmentRoute(
@@ -90,7 +93,7 @@ private fun EnvironmentScreen(
             }
 
             item {
-                AppListCard(
+                EnvironmentAppListCard(
                     uiState = uiState,
                     onSearchQueryChange = onSearchQueryChange,
                     onShowSystemAppsChange = onShowSystemAppsChange,
@@ -103,7 +106,7 @@ private fun EnvironmentScreen(
 }
 
 @Composable
-private fun AppListCard(
+private fun EnvironmentAppListCard(
     uiState: EnvironmentUiState,
     onSearchQueryChange: (String) -> Unit,
     onShowSystemAppsChange: (Boolean) -> Unit,
@@ -131,7 +134,7 @@ private fun AppListCard(
                 InlineLoadingRow()
             } else {
                 uiState.filteredApps.forEach { app ->
-                    InstalledAppRow(
+                    AppHookRow(
                         app = app,
                         onHookEnabledChange = onHookEnabledChange,
                     )
@@ -179,6 +182,44 @@ private fun LsposedStatusCard(enabled: Boolean) {
         Row(
             modifier = Modifier
                 .background(background)
+                .padding(horizontal = 20.dp, vertical = 18.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.ErrorOutline,
+                contentDescription = null,
+                tint = contentColor,
+                modifier = Modifier.size(26.dp),
+            )
+            Text(
+                text = message,
+                modifier = Modifier.weight(1f),
+                style = MaterialTheme.typography.titleMedium,
+                color = contentColor,
+                fontWeight = FontWeight.SemiBold,
+            )
+        }
+    }
+}
+
+@Composable
+internal fun StaticInfoBanner(
+    message: String,
+    contentColor: Color,
+    startColor: Color,
+    endColor: Color,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(10.dp),
+        color = Color.Transparent,
+        shadowElevation = 0.dp,
+    ) {
+        Row(
+            modifier = Modifier
+                .background(Brush.linearGradient(listOf(startColor, endColor)))
                 .padding(horizontal = 20.dp, vertical = 18.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(14.dp),
@@ -310,7 +351,7 @@ private fun EnvironmentControls(
 }
 
 @Composable
-private fun SearchField(
+internal fun SearchField(
     value: String,
     onValueChange: (String) -> Unit,
     modifier: Modifier = Modifier,
@@ -354,7 +395,7 @@ private fun SearchField(
 }
 
 @Composable
-private fun InstalledAppRow(
+internal fun AppHookRow(
     app: InstalledAppItem,
     onHookEnabledChange: (String, Boolean) -> Unit,
 ) {
@@ -400,7 +441,7 @@ private fun InstalledAppRow(
 }
 
 @Composable
-private fun InstalledAppIcon(app: InstalledAppItem) {
+internal fun InstalledAppIcon(app: InstalledAppItem) {
     val icon = remember(app.packageName, app.icon) {
         app.icon.toBitmap(width = 96, height = 96).asImageBitmap()
     }
@@ -413,7 +454,7 @@ private fun InstalledAppIcon(app: InstalledAppItem) {
 }
 
 @Composable
-private fun HookSwitch(
+internal fun HookSwitch(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
 ) {
@@ -439,7 +480,7 @@ private fun HookSwitch(
 }
 
 @Composable
-private fun InlineLoadingRow() {
+internal fun InlineLoadingRow() {
     Row(
         modifier = Modifier
             .fillMaxWidth()
