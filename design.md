@@ -482,6 +482,7 @@ fun SToolApp(settings: UserSettings) {
 
 Room 要求：
 
+- Room 2.8+ 不允许空实体数据库；如果启用 Room KSP，`@Database` 必须至少声明一个 `@Entity`。
 - Entity 不直接暴露给 Domain/UI。
 - DAO 返回 `Flow<List<Entity>>`。
 - 数据迁移必须显式写 Migration，禁止生产环境使用 destructive migration。
