@@ -20,6 +20,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.svwh.tools.core.datastore.UserSettings
+import com.svwh.tools.feature.environment.presentation.EnvironmentRoute
 import com.svwh.tools.feature.settings.presentation.SettingsRoute
 import kotlinx.coroutines.launch
 
@@ -71,6 +72,7 @@ fun AppNavHost(
                 .padding(paddingValues),
         ) { page ->
             when (val tab = tabs[page]) {
+                AppRoute.Environment -> EnvironmentRoute()
                 AppRoute.Settings -> SettingsRoute()
                 else -> TabTextPage(tab = tab)
             }

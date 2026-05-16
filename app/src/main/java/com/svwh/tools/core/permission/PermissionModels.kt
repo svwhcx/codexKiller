@@ -9,3 +9,9 @@ enum class PermissionStatus {
     Granted,
     Denied,
 }
+
+enum class PackageVisibilityAccess {
+    LegacyNoRuntimePermission,
+    QueryAllPackagesDeclared,
+    LimitedVisibility,
+}
