@@ -14,18 +14,27 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.svwh.tools.core.datastore.UserSettings
+import com.svwh.tools.feature.settings.presentation.SettingsRoute
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun AppNavHost(
+    startupSettings: UserSettings,
     modifier: Modifier = Modifier,
 ) {
-    val tabs = AppRoute.bottomTabs
+    val tabs = remember {
+        AppRoute.bottomTabs(
+            showNoEnvironment = startupSettings.showNoEnvironmentTab,
+            showEnvironment = startupSettings.showEnvironmentTab,
+        )
+    }
     val pagerState = rememberPagerState(pageCount = { tabs.size })
     val coroutineScope = rememberCoroutineScope()
 
@@ -61,7 +70,10 @@ fun AppNavHost(
                 .fillMaxSize()
                 .padding(paddingValues),
         ) { page ->
-            TabTextPage(tab = tabs[page])
+            when (val tab = tabs[page]) {
+                AppRoute.Settings -> SettingsRoute()
+                else -> TabTextPage(tab = tab)
+            }
         }
     }
 }

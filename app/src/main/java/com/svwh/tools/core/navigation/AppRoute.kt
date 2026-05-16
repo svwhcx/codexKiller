@@ -37,11 +37,16 @@ sealed class AppRoute(
     )
 
     companion object {
-        val bottomTabs = listOf(
-            Home,
-            NoEnvironment,
-            Environment,
-            Settings,
-        )
+        fun bottomTabs(
+            showNoEnvironment: Boolean,
+            showEnvironment: Boolean,
+        ): List<AppRoute> {
+            return buildList {
+                add(Home)
+                if (showNoEnvironment) add(NoEnvironment)
+                if (showEnvironment) add(Environment)
+                add(Settings)
+            }
+        }
     }
 }

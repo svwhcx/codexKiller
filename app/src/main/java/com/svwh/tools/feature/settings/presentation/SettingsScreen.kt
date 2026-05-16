@@ -10,12 +10,16 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ArrowBack
 import androidx.compose.material3.AssistChip
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
@@ -36,7 +40,7 @@ import com.svwh.tools.core.datastore.UserSettings
 
 @Composable
 fun SettingsRoute(
-    onBack: () -> Unit,
+    onBack: (() -> Unit)? = null,
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -46,6 +50,8 @@ fun SettingsRoute(
         onBack = onBack,
         onThemeModeChange = viewModel::setThemeMode,
         onDynamicColorChange = viewModel::setDynamicColor,
+        onShowNoEnvironmentTabChange = viewModel::setShowNoEnvironmentTab,
+        onShowEnvironmentTabChange = viewModel::setShowEnvironmentTab,
     )
 }
 
@@ -53,20 +59,24 @@ fun SettingsRoute(
 @Composable
 private fun SettingsScreen(
     uiState: UserSettings,
-    onBack: () -> Unit,
+    onBack: (() -> Unit)?,
     onThemeModeChange: (ThemeMode) -> Unit,
     onDynamicColorChange: (Boolean) -> Unit,
+    onShowNoEnvironmentTabChange: (Boolean) -> Unit,
+    onShowEnvironmentTabChange: (Boolean) -> Unit,
 ) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Settings") },
+                title = { Text("设置") },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            imageVector = Icons.Outlined.ArrowBack,
-                            contentDescription = "Back",
-                        )
+                    if (onBack != null) {
+                        IconButton(onClick = onBack) {
+                            Icon(
+                                imageVector = Icons.Outlined.ArrowBack,
+                                contentDescription = "Back",
+                            )
+                        }
                     }
                 },
             )
@@ -80,7 +90,7 @@ private fun SettingsScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             SettingsSection(
-                title = "Theme",
+                title = "主题",
                 contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
             ) {
                 Row(
@@ -97,9 +107,9 @@ private fun SettingsScreen(
                 }
 
                 ListItem(
-                    headlineContent = { Text("Dynamic color") },
+                    headlineContent = { Text("动态取色") },
                     supportingContent = {
-                        Text("Use Android system colors on supported devices.")
+                        Text("在支持的设备上使用 Android 系统配色。")
                     },
                     trailingContent = {
                         Switch(
@@ -111,7 +121,51 @@ private fun SettingsScreen(
             }
 
             SettingsSection(
-                title = "Foundation",
+                title = "UI 设置",
+                contentPadding = PaddingValues(horizontal = 20.dp, vertical = 4.dp),
+            ) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    ),
+                ) {
+                    Column(
+                        modifier = Modifier.padding(vertical = 6.dp),
+                    ) {
+                        Text(
+                            text = "环境页签显示",
+                            modifier = Modifier.padding(horizontal = 18.dp, vertical = 10.dp),
+                            style = MaterialTheme.typography.titleMedium,
+                        )
+                        SettingsSwitchRow(
+                            title = "显示无环境",
+                            description = "控制底部栏是否显示无环境页签。",
+                            checked = uiState.showNoEnvironmentTab,
+                            onCheckedChange = onShowNoEnvironmentTabChange,
+                        )
+                        HorizontalDivider(
+                            modifier = Modifier.padding(horizontal = 18.dp),
+                            color = MaterialTheme.colorScheme.outlineVariant,
+                        )
+                        SettingsSwitchRow(
+                            title = "显示有环境",
+                            description = "控制底部栏是否显示有环境页签。",
+                            checked = uiState.showEnvironmentTab,
+                            onCheckedChange = onShowEnvironmentTabChange,
+                        )
+                        Text(
+                            text = "提示：页签显示设置将在重启 App 后生效。",
+                            modifier = Modifier.padding(horizontal = 18.dp, vertical = 12.dp),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                }
+            }
+
+            SettingsSection(
+                title = "基础能力",
                 contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
             ) {
                 Row(
@@ -137,6 +191,28 @@ private fun SettingsScreen(
 }
 
 @Composable
+private fun SettingsSwitchRow(
+    title: String,
+    description: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+) {
+    ListItem(
+        modifier = Modifier.clickable {
+            onCheckedChange(!checked)
+        },
+        headlineContent = { Text(text = title) },
+        supportingContent = { Text(text = description) },
+        trailingContent = {
+            Switch(
+                checked = checked,
+                onCheckedChange = onCheckedChange,
+            )
+        },
+    )
+}
+
+@Composable
 private fun SettingsSection(
     title: String,
     contentPadding: PaddingValues,
@@ -157,7 +233,7 @@ private fun SettingsSection(
 
 private val ThemeMode.label: String
     get() = when (this) {
-        ThemeMode.FollowSystem -> "System"
-        ThemeMode.Light -> "Light"
-        ThemeMode.Dark -> "Dark"
+        ThemeMode.FollowSystem -> "跟随系统"
+        ThemeMode.Light -> "浅色"
+        ThemeMode.Dark -> "深色"
     }

@@ -38,6 +38,8 @@ class SettingsDataStore @Inject constructor(
                     ?.let(::runCatchingThemeMode)
                     ?: ThemeMode.FollowSystem,
                 dynamicColor = preferences[Keys.DynamicColor] ?: true,
+                showNoEnvironmentTab = preferences[Keys.ShowNoEnvironmentTab] ?: true,
+                showEnvironmentTab = preferences[Keys.ShowEnvironmentTab] ?: true,
             )
         }
 
@@ -53,6 +55,18 @@ class SettingsDataStore @Inject constructor(
         }
     }
 
+    suspend fun setShowNoEnvironmentTab(enabled: Boolean) {
+        context.settingsDataStore.edit { preferences ->
+            preferences[Keys.ShowNoEnvironmentTab] = enabled
+        }
+    }
+
+    suspend fun setShowEnvironmentTab(enabled: Boolean) {
+        context.settingsDataStore.edit { preferences ->
+            preferences[Keys.ShowEnvironmentTab] = enabled
+        }
+    }
+
     private fun runCatchingThemeMode(value: String): ThemeMode? {
         return runCatching { ThemeMode.valueOf(value) }.getOrNull()
     }
@@ -60,5 +74,7 @@ class SettingsDataStore @Inject constructor(
     private object Keys {
         val ThemeMode = stringPreferencesKey("theme_mode")
         val DynamicColor = booleanPreferencesKey("dynamic_color")
+        val ShowNoEnvironmentTab = booleanPreferencesKey("show_no_environment_tab")
+        val ShowEnvironmentTab = booleanPreferencesKey("show_environment_tab")
     }
 }

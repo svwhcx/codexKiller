@@ -14,10 +14,10 @@ import kotlinx.coroutines.flow.stateIn
 class MainViewModel @Inject constructor(
     settingsDataStore: SettingsDataStore,
 ) : ViewModel() {
-    val userSettings: StateFlow<UserSettings> = settingsDataStore.userSettings
+    val userSettings: StateFlow<UserSettings?> = settingsDataStore.userSettings
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5_000),
-            initialValue = UserSettings(),
+            initialValue = null,
         )
 }

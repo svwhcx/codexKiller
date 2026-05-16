@@ -7,6 +7,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.svwh.tools.core.datastore.UserSettings
 import com.svwh.tools.core.designsystem.theme.SToolTheme
 import com.svwh.tools.core.navigation.AppNavHost
 import dagger.hilt.android.AndroidEntryPoint
@@ -21,12 +22,15 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             val settings by viewModel.userSettings.collectAsStateWithLifecycle()
+            val themeSettings = settings ?: UserSettings()
 
             SToolTheme(
-                themeMode = settings.themeMode,
-                dynamicColor = settings.dynamicColor,
+                themeMode = themeSettings.themeMode,
+                dynamicColor = themeSettings.dynamicColor,
             ) {
-                AppNavHost()
+                settings?.let { loadedSettings ->
+                    AppNavHost(startupSettings = loadedSettings)
+                }
             }
         }
     }

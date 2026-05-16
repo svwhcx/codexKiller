@@ -34,4 +34,16 @@ class SettingsViewModel @Inject constructor(
             settingsDataStore.setDynamicColor(enabled)
         }
     }
+
+    fun setShowNoEnvironmentTab(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsDataStore.setShowNoEnvironmentTab(enabled)
+        }
+    }
+
+    fun setShowEnvironmentTab(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsDataStore.setShowEnvironmentTab(enabled)
+        }
+    }
 }
