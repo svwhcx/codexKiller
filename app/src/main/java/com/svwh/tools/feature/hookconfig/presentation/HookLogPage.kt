@@ -49,8 +49,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.svwh.tools.core.designsystem.component.LoadMoreUiState
-import com.svwh.tools.core.designsystem.component.RefreshLoadMoreLazyColumn
+import com.svwh.tools.ui.components.RefreshableList
+import com.svwh.tools.ui.components.LoadMoreStatus
 import com.svwh.tools.feature.environment.presentation.HookSwitch
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -71,7 +71,7 @@ internal fun HookLogPage() {
     var autoScroll by rememberSaveable { mutableStateOf(true) }
     var visibleCount by rememberSaveable { mutableIntStateOf(LogPageSize) }
     var isRefreshing by rememberSaveable { mutableStateOf(false) }
-    var loadMoreState by rememberSaveable { mutableStateOf(LoadMoreUiState.Idle) }
+    var loadMoreState by rememberSaveable { mutableStateOf(LoadMoreStatus.Idle) }
     val logs = remember { buildPagedSampleLogs(sampleHookLogs()) }
     val filteredLogs = remember(submittedSearchQuery, errorOnly, logs) {
         logs.filter { log ->
@@ -89,15 +89,15 @@ internal fun HookLogPage() {
 
     fun resetPaging() {
         visibleCount = LogPageSize
-        loadMoreState = LoadMoreUiState.Idle
+        loadMoreState = LoadMoreStatus.Idle
     }
 
     fun showNoMoreTemporarily() {
-        loadMoreState = LoadMoreUiState.NoMore
+        loadMoreState = LoadMoreStatus.NoMoreData
         coroutineScope.launch {
             delay(2_000)
-            if (loadMoreState == LoadMoreUiState.NoMore) {
-                loadMoreState = LoadMoreUiState.Idle
+            if (loadMoreState == LoadMoreStatus.NoMoreData) {
+                loadMoreState = LoadMoreStatus.Idle
             }
         }
     }
@@ -108,16 +108,16 @@ internal fun HookLogPage() {
         coroutineScope.launch {
             delay(650)
             visibleCount = LogPageSize
-            loadMoreState = LoadMoreUiState.Idle
+            loadMoreState = LoadMoreStatus.Idle
             isRefreshing = false
         }
     }
 
     fun loadNextPage() {
-        if (isRefreshing || loadMoreState == LoadMoreUiState.Loading) return
+        if (isRefreshing || loadMoreState == LoadMoreStatus.Loading) return
 
         if (visibleCount >= filteredLogs.size) {
-            loadMoreState = LoadMoreUiState.Loading
+            loadMoreState = LoadMoreStatus.Loading
             coroutineScope.launch {
                 delay(500)
                 showNoMoreTemporarily()
@@ -125,7 +125,7 @@ internal fun HookLogPage() {
             return
         }
 
-        loadMoreState = LoadMoreUiState.Loading
+        loadMoreState = LoadMoreStatus.Loading
         coroutineScope.launch {
             delay(850)
             val nextCount = (visibleCount + LogPageSize).coerceAtMost(filteredLogs.size)
@@ -133,7 +133,7 @@ internal fun HookLogPage() {
             if (nextCount >= filteredLogs.size) {
                 showNoMoreTemporarily()
             } else {
-                loadMoreState = LoadMoreUiState.Idle
+                loadMoreState = LoadMoreStatus.Idle
             }
         }
     }
@@ -159,18 +159,18 @@ internal fun HookLogPage() {
             onAutoScrollChange = { autoScroll = it },
         )
 
-        RefreshLoadMoreLazyColumn(
+        RefreshableList(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f),
             isRefreshing = isRefreshing,
-            loadMoreState = loadMoreState,
-            contentPadding = PaddingValues(bottom = 22.dp),
             onRefresh = ::refreshFirstPage,
+            isLoadingMore = loadMoreState == LoadMoreStatus.Loading,
             onLoadMore = ::loadNextPage,
+            hasMoreData = visibleCount < filteredLogs.size,
         ) {
-            items(visibleLogs, key = { it.id }) { log ->
-                HookLogRow(log = log)
+            items(visibleLogs, key = { it.id }) {
+                HookLogRow(log = it)
             }
         }
     }
