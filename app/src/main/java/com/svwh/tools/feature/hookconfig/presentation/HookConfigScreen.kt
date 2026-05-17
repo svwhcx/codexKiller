@@ -14,22 +14,32 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Save
+import androidx.compose.material.icons.outlined.MoreVert
+import androidx.compose.material.icons.outlined.Upload
+import androidx.compose.material.icons.outlined.Save
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -176,9 +186,48 @@ private fun HookConfigHeader(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     EnvironmentChip(envType = envType)
-                    HookTopAction(icon = Icons.Outlined.Save, contentDescription = "保存")
-                    HookTopAction(icon = Icons.Outlined.Refresh, contentDescription = "刷新")
-                    HookTopAction(icon = Icons.Outlined.PlayArrow, contentDescription = "运行")
+                    var menuExpanded by remember { mutableStateOf(false) }
+                    Box {
+                        IconButton(onClick = { menuExpanded = true }) {
+                            Icon(
+                                imageVector = Icons.Outlined.MoreVert,
+                                contentDescription = "更多操作",
+                                tint = Color(0xFF303746),
+                            )
+                        }
+
+                        DropdownMenu(
+                            expanded = menuExpanded,
+                            onDismissRequest = { menuExpanded = false },
+                            containerColor = Color.White,
+                            shadowElevation = 10.dp,
+                            shape = RoundedCornerShape(18.dp),
+                        ) {
+                            Column(modifier = Modifier.padding(0.dp)) {
+                                DropdownMenuItem(
+                                    text = { Text("启动") },
+                                    onClick = { /* TODO: Handle Start action */ menuExpanded = false },
+                                    leadingIcon = { Icon(Icons.Outlined.PlayArrow, contentDescription = null) },
+                                    // Reduce item padding
+                                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("重启") },
+                                    onClick = { /* TODO: Handle Restart action */ menuExpanded = false },
+                                    leadingIcon = { Icon(Icons.Outlined.Refresh, contentDescription = null) },
+                                    // Reduce item padding
+                                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("导出") },
+                                    onClick = { /* TODO: Handle Export action */ menuExpanded = false },
+                                    leadingIcon = { Icon(Icons.Outlined.Upload, contentDescription = null) },
+                                    // Reduce item padding
+                                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                                )
+                            }
+                        }
+                    }
                 }
             }
 
