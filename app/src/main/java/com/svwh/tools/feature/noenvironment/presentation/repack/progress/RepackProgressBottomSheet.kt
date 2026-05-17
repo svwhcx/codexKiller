@@ -64,9 +64,12 @@ fun RepackProgressSheetHost(
     onDetails: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    BackHandler(enabled = state.visible && state.sessionFinished) {
-        onDismiss()
+    BackHandler(enabled = state.visible) {
+        if (state.sessionFinished) {
+            onDismiss()
+        }
     }
+    val scrimInteractionSource = remember { MutableInteractionSource() }
 
     Box(modifier = modifier.fillMaxSize()) {
         AnimatedVisibility(
@@ -77,7 +80,12 @@ fun RepackProgressSheetHost(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.35f)),
+                    .background(Color.Black.copy(alpha = 0.35f))
+                    .clickable(
+                        interactionSource = scrimInteractionSource,
+                        indication = null,
+                        onClick = {},
+                    ),
             )
         }
 
