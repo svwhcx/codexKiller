@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -35,8 +34,10 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -48,21 +49,30 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.svwh.tools.core.designsystem.component.LoadMoreUiState
+import com.svwh.tools.core.designsystem.component.RefreshLoadMoreLazyColumn
 import com.svwh.tools.feature.environment.presentation.HookSwitch
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 private val LogSearchBackground = Color(0xFFF8FAFE)
 private val LogSearchActionBackground = Color(0xFFF0F4FB)
 private val LogTextPrimary = Color(0xFF2F3747)
 private val LogTextSecondary = Color(0xFF6C768A)
 private val LogControlCornerRadius = 10.dp
+private const val LogPageSize = 100
 
 @Composable
 internal fun HookLogPage() {
+    val coroutineScope = rememberCoroutineScope()
     var searchInput by rememberSaveable { mutableStateOf("") }
     var submittedSearchQuery by rememberSaveable { mutableStateOf("") }
     var errorOnly by rememberSaveable { mutableStateOf(false) }
     var autoScroll by rememberSaveable { mutableStateOf(true) }
-    val logs = remember { sampleHookLogs() }
+    var visibleCount by rememberSaveable { mutableIntStateOf(LogPageSize) }
+    var isRefreshing by rememberSaveable { mutableStateOf(false) }
+    var loadMoreState by rememberSaveable { mutableStateOf(LoadMoreUiState.Idle) }
+    val logs = remember { buildPagedSampleLogs(sampleHookLogs()) }
     val filteredLogs = remember(submittedSearchQuery, errorOnly, logs) {
         logs.filter { log ->
             val matchesLevel = !errorOnly || log.level == HookLogLevel.Error
@@ -71,6 +81,60 @@ internal fun HookLogPage() {
                 log.className.contains(submittedSearchQuery, ignoreCase = true) ||
                 log.target.contains(submittedSearchQuery, ignoreCase = true)
             matchesLevel && matchesQuery
+        }
+    }
+    val visibleLogs = remember(filteredLogs, visibleCount) {
+        filteredLogs.take(visibleCount)
+    }
+
+    fun resetPaging() {
+        visibleCount = LogPageSize
+        loadMoreState = LoadMoreUiState.Idle
+    }
+
+    fun showNoMoreTemporarily() {
+        loadMoreState = LoadMoreUiState.NoMore
+        coroutineScope.launch {
+            delay(2_000)
+            if (loadMoreState == LoadMoreUiState.NoMore) {
+                loadMoreState = LoadMoreUiState.Idle
+            }
+        }
+    }
+
+    fun refreshFirstPage() {
+        if (isRefreshing) return
+        isRefreshing = true
+        coroutineScope.launch {
+            delay(650)
+            visibleCount = LogPageSize
+            loadMoreState = LoadMoreUiState.Idle
+            isRefreshing = false
+        }
+    }
+
+    fun loadNextPage() {
+        if (isRefreshing || loadMoreState == LoadMoreUiState.Loading) return
+
+        if (visibleCount >= filteredLogs.size) {
+            loadMoreState = LoadMoreUiState.Loading
+            coroutineScope.launch {
+                delay(500)
+                showNoMoreTemporarily()
+            }
+            return
+        }
+
+        loadMoreState = LoadMoreUiState.Loading
+        coroutineScope.launch {
+            delay(850)
+            val nextCount = (visibleCount + LogPageSize).coerceAtMost(filteredLogs.size)
+            visibleCount = nextCount
+            if (nextCount >= filteredLogs.size) {
+                showNoMoreTemporarily()
+            } else {
+                loadMoreState = LoadMoreUiState.Idle
+            }
         }
     }
 
@@ -82,33 +146,31 @@ internal fun HookLogPage() {
         HookLogToolbar(
             searchQuery = searchInput,
             onSearchQueryChange = { searchInput = it },
-            onSearchClick = { submittedSearchQuery = searchInput.trim() },
+            onSearchClick = {
+                submittedSearchQuery = searchInput.trim()
+                resetPaging()
+            },
             errorOnly = errorOnly,
             autoScroll = autoScroll,
-            onErrorOnlyChange = { errorOnly = it },
+            onErrorOnlyChange = {
+                errorOnly = it
+                resetPaging()
+            },
             onAutoScrollChange = { autoScroll = it },
         )
 
-        LazyColumn(
+        RefreshLoadMoreLazyColumn(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f),
+            isRefreshing = isRefreshing,
+            loadMoreState = loadMoreState,
             contentPadding = PaddingValues(bottom = 22.dp),
+            onRefresh = ::refreshFirstPage,
+            onLoadMore = ::loadNextPage,
         ) {
-            items(filteredLogs, key = { it.id }) { log ->
+            items(visibleLogs, key = { it.id }) { log ->
                 HookLogRow(log = log)
-            }
-
-            item {
-                Text(
-                    text = "已加载全部日志",
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 18.dp),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = HookConfigMutedText,
-                    textAlign = TextAlign.Center,
-                )
             }
         }
     }
@@ -448,4 +510,16 @@ private fun HookLogMetaText(
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
     )
+}
+
+private fun buildPagedSampleLogs(baseLogs: List<HookLogItem>): List<HookLogItem> {
+    if (baseLogs.isEmpty()) return emptyList()
+
+    return List(235) { index ->
+        val source = baseLogs[index % baseLogs.size]
+        source.copy(
+            id = "${source.id}-$index",
+            timestampMillis = source.timestampMillis - index * 37_000L,
+        )
+    }
 }
