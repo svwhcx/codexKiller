@@ -30,6 +30,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.svwh.tools.feature.environment.domain.model.InstalledAppItem
+import com.svwh.tools.feature.environment.presentation.AppRowHorizontalPadding
+import com.svwh.tools.feature.environment.presentation.AppRowVerticalPadding
 import com.svwh.tools.feature.environment.presentation.InstalledAppIcon
 
 private val RowCornerRadius = 8.dp
@@ -40,7 +42,7 @@ private val ActionEndShape = RoundedCornerShape(
     bottomEnd = RowCornerRadius,
     bottomStart = 0.dp,
 )
-private val RepackActionWidth = 72.dp
+private val RepackActionWidth = 60.dp
 
 @Composable
 fun InstalledAppRepackRow(
@@ -66,18 +68,23 @@ fun InstalledAppRepackRow(
                 modifier = Modifier
                     .weight(1f)
                     .clickable(onClick = onItemClick)
-                    .padding(start = 9.dp, top = 8.dp, end = 10.dp, bottom = 8.dp),
+                    .padding(
+                        start = AppRowHorizontalPadding,
+                        top = AppRowVerticalPadding,
+                        end = 10.dp,
+                        bottom = AppRowVerticalPadding,
+                    ),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 InstalledAppIcon(app = app)
-                Spacer(modifier = Modifier.width(14.dp))
+                Spacer(modifier = Modifier.width(10.dp))
                 Column(
                     modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
                 ) {
                     Text(
                         text = app.appName,
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -126,7 +133,7 @@ private fun RepackActionStrip(
     ) {
         Text(
             text = "打包",
-            style = MaterialTheme.typography.titleSmall,
+            style = MaterialTheme.typography.bodySmall,
             fontWeight = FontWeight.SemiBold,
             color = RepackBlue,
         )

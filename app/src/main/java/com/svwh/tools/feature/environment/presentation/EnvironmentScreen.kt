@@ -61,6 +61,18 @@ internal val ListContainer = Color(0xFFFFFFFF)
 internal val SwitchTrackOff = Color(0xFFE3E5E9)
 internal val SwitchThumb = Color(0xFFFFFFFF)
 
+internal val AppListControlHeight = 38.dp
+internal val AppIconSize = 36.dp
+internal val AppRowHorizontalPadding = 8.dp
+internal val AppRowVerticalPadding = 6.dp
+internal val AppListItemSpacing = 6.dp
+private val BannerHorizontalPadding = 14.dp
+private val BannerVerticalPadding = 10.dp
+private val BannerIconSize = 20.dp
+private val HookSwitchWidth = 44.dp
+private val HookSwitchHeight = 26.dp
+private val HookSwitchThumbSize = 22.dp
+
 @Composable
 fun EnvironmentRoute(
     viewModel: EnvironmentViewModel = hiltViewModel(),
@@ -119,8 +131,8 @@ private fun EnvironmentAppListCard(
         shadowElevation = 1.dp,
     ) {
         Column(
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 10.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             EnvironmentControls(
                 searchQuery = uiState.searchQuery,
@@ -133,11 +145,13 @@ private fun EnvironmentAppListCard(
             if (uiState.isLoading) {
                 InlineLoadingRow()
             } else {
-                uiState.filteredApps.forEach { app ->
-                    AppHookRow(
-                        app = app,
-                        onHookEnabledChange = onHookEnabledChange,
-                    )
+                Column(verticalArrangement = Arrangement.spacedBy(AppListItemSpacing)) {
+                    uiState.filteredApps.forEach { app ->
+                        AppHookRow(
+                            app = app,
+                            onHookEnabledChange = onHookEnabledChange,
+                        )
+                    }
                 }
                 if (uiState.filteredApps.isEmpty()) {
                     Box(
@@ -182,22 +196,22 @@ private fun LsposedStatusCard(enabled: Boolean) {
         Row(
             modifier = Modifier
                 .background(background)
-                .padding(horizontal = 20.dp, vertical = 18.dp),
+                .padding(horizontal = BannerHorizontalPadding, vertical = BannerVerticalPadding),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(14.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Icon(
                 imageVector = Icons.Outlined.ErrorOutline,
                 contentDescription = null,
                 tint = contentColor,
-                modifier = Modifier.size(26.dp),
+                modifier = Modifier.size(BannerIconSize),
             )
             Text(
                 text = message,
                 modifier = Modifier.weight(1f),
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.bodyMedium,
                 color = contentColor,
-                fontWeight = FontWeight.SemiBold,
+                fontWeight = FontWeight.Medium,
             )
         }
     }
@@ -220,22 +234,22 @@ internal fun StaticInfoBanner(
         Row(
             modifier = Modifier
                 .background(Brush.linearGradient(listOf(startColor, endColor)))
-                .padding(horizontal = 20.dp, vertical = 18.dp),
+                .padding(horizontal = BannerHorizontalPadding, vertical = BannerVerticalPadding),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(14.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Icon(
                 imageVector = Icons.Outlined.ErrorOutline,
                 contentDescription = null,
                 tint = contentColor,
-                modifier = Modifier.size(26.dp),
+                modifier = Modifier.size(BannerIconSize),
             )
             Text(
                 text = message,
                 modifier = Modifier.weight(1f),
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.bodyMedium,
                 color = contentColor,
-                fontWeight = FontWeight.SemiBold,
+                fontWeight = FontWeight.Medium,
             )
         }
     }
@@ -268,25 +282,25 @@ private fun EnvironmentControls(
             Box {
                 Surface(
                     modifier = Modifier
-                        .height(48.dp)
+                        .height(AppListControlHeight)
                         .clickable { filterExpanded = true },
                     shape = RoundedCornerShape(6.dp),
                     color = MaterialTheme.colorScheme.surface,
                 ) {
                     Row(
-                        modifier = Modifier.padding(horizontal = 12.dp),
+                        modifier = Modifier.padding(horizontal = 10.dp),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(5.dp),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
                         Icon(
                             imageVector = Icons.Outlined.FilterList,
                             contentDescription = null,
-                            modifier = Modifier.size(18.dp),
+                            modifier = Modifier.size(16.dp),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         Text(
                             text = "筛选",
-                            style = MaterialTheme.typography.bodyMedium,
+                            style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
@@ -360,30 +374,30 @@ internal fun SearchField(
         value = value,
         onValueChange = onValueChange,
         singleLine = true,
-        textStyle = MaterialTheme.typography.bodyMedium.copy(
+        textStyle = MaterialTheme.typography.bodySmall.copy(
             color = MaterialTheme.colorScheme.onSurface,
         ),
         modifier = modifier
-            .height(48.dp)
+            .height(AppListControlHeight)
             .background(SearchContainer, RoundedCornerShape(6.dp))
-            .padding(horizontal = 13.dp),
+            .padding(horizontal = 10.dp),
         decorationBox = { innerTextField ->
             Row(
                 modifier = Modifier.fillMaxSize(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(9.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 Icon(
                     imageVector = Icons.Outlined.Search,
                     contentDescription = null,
-                    modifier = Modifier.size(19.dp),
+                    modifier = Modifier.size(16.dp),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Box(modifier = Modifier.weight(1f)) {
                     if (value.isBlank()) {
                         Text(
                             text = "搜索应用名称或包名",
-                            style = MaterialTheme.typography.bodyMedium,
+                            style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
@@ -408,18 +422,21 @@ internal fun AppHookRow(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 9.dp, vertical = 8.dp),
+                .padding(
+                    horizontal = AppRowHorizontalPadding,
+                    vertical = AppRowVerticalPadding,
+                ),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             InstalledAppIcon(app = app)
-            Spacer(modifier = Modifier.width(14.dp))
+            Spacer(modifier = Modifier.width(10.dp))
             Column(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
             ) {
                 Text(
                     text = app.appName,
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.bodyLarge,
                     color = if (app.hookEnabled) SuccessGreen else MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -443,13 +460,13 @@ internal fun AppHookRow(
 @Composable
 internal fun InstalledAppIcon(app: InstalledAppItem) {
     val icon = remember(app.packageName, app.icon) {
-        app.icon.toBitmap(width = 96, height = 96).asImageBitmap()
+        app.icon.toBitmap(width = 72, height = 72).asImageBitmap()
     }
 
     Image(
         bitmap = icon,
         contentDescription = app.appName,
-        modifier = Modifier.size(48.dp),
+        modifier = Modifier.size(AppIconSize),
     )
 }
 
@@ -459,12 +476,16 @@ internal fun HookSwitch(
     onCheckedChange: (Boolean) -> Unit,
 ) {
     val trackColor = if (checked) SuccessGreen else SwitchTrackOff
-    val thumbOffset = if (checked) 26.dp else 2.dp
+    val thumbOffset = if (checked) {
+        HookSwitchWidth - HookSwitchThumbSize - 2.dp
+    } else {
+        2.dp
+    }
 
     Box(
         modifier = Modifier
-            .size(width = 54.dp, height = 32.dp)
-            .clip(RoundedCornerShape(18.dp))
+            .size(width = HookSwitchWidth, height = HookSwitchHeight)
+            .clip(RoundedCornerShape(HookSwitchHeight / 2))
             .background(trackColor)
             .clickable { onCheckedChange(!checked) },
         contentAlignment = Alignment.CenterStart,
@@ -472,8 +493,8 @@ internal fun HookSwitch(
         Box(
             modifier = Modifier
                 .offset(x = thumbOffset)
-                .size(28.dp)
-                .clip(RoundedCornerShape(14.dp))
+                .size(HookSwitchThumbSize)
+                .clip(RoundedCornerShape(HookSwitchThumbSize / 2))
                 .background(SwitchThumb),
         )
     }

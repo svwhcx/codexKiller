@@ -18,9 +18,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.svwh.tools.feature.environment.presentation.AppListItemSpacing
 import com.svwh.tools.feature.environment.presentation.InlineLoadingRow
 import com.svwh.tools.feature.environment.presentation.ListContainer
 import com.svwh.tools.feature.environment.presentation.SearchField
@@ -92,8 +94,8 @@ private fun RepackAppListCard(
         shadowElevation = 1.dp,
     ) {
         Column(
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 10.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             SearchField(
                 value = uiState.searchQuery,
@@ -108,6 +110,7 @@ private fun RepackAppListCard(
                     text = "应用列表",
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.onSurface,
+                    fontWeight = FontWeight.SemiBold,
                 )
                 Text(
                     text = "共 ${uiState.filteredApps.size} 个应用",
@@ -132,9 +135,7 @@ private fun RepackAppListCard(
                     )
                 }
             } else {
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                ) {
+                Column(verticalArrangement = Arrangement.spacedBy(AppListItemSpacing)) {
                     uiState.filteredApps.forEach { app ->
                         InstalledAppRepackRow(
                             app = app,
