@@ -1,5 +1,6 @@
 package com.svwh.tools.core.navigation
 
+import android.net.Uri
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
@@ -22,11 +23,14 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.svwh.tools.core.datastore.UserSettings
 import com.svwh.tools.feature.environment.presentation.EnvironmentRoute
+import com.svwh.tools.feature.hookconfig.presentation.HookConfigRoute
 import com.svwh.tools.feature.noenvironment.presentation.NoEnvironmentRoute
 import com.svwh.tools.feature.noenvironment.presentation.repack.RepackAppListRoute
 import com.svwh.tools.feature.settings.presentation.SettingsRoute
@@ -49,6 +53,15 @@ fun AppNavHost(
                 startupSettings = startupSettings,
                 onNavigateToRepackAppList = {
                     navController.navigate(AppDestination.REPACK_APP_LIST)
+                },
+                onNavigateToHookConfig = { envType, packageName, appName ->
+                    navController.navigate(
+                        AppDestination.hookConfigRoute(
+                            envType = envType,
+                            packageName = packageName,
+                            appName = appName,
+                        ),
+                    )
                 },
             )
         }
@@ -81,6 +94,48 @@ fun AppNavHost(
         ) {
             RepackAppListRoute()
         }
+        composable(
+            route = AppDestination.HOOK_CONFIG_ROUTE,
+            arguments = listOf(
+                navArgument("envType") { type = NavType.StringType },
+                navArgument("packageName") { type = NavType.StringType },
+                navArgument("appName") {
+                    type = NavType.StringType
+                    defaultValue = ""
+                },
+            ),
+            enterTransition = {
+                slideInHorizontally(
+                    animationSpec = tween(300),
+                    initialOffsetX = { fullWidth -> fullWidth },
+                )
+            },
+            exitTransition = {
+                slideOutHorizontally(
+                    animationSpec = tween(300),
+                    targetOffsetX = { fullWidth -> -fullWidth / 3 },
+                )
+            },
+            popEnterTransition = {
+                slideInHorizontally(
+                    animationSpec = tween(300),
+                    initialOffsetX = { fullWidth -> -fullWidth / 3 },
+                )
+            },
+            popExitTransition = {
+                slideOutHorizontally(
+                    animationSpec = tween(300),
+                    targetOffsetX = { fullWidth -> fullWidth },
+                )
+            },
+        ) { backStackEntry ->
+            HookConfigRoute(
+                appName = backStackEntry.arguments?.getString("appName")?.let(Uri::decode).orEmpty(),
+                packageName = backStackEntry.arguments?.getString("packageName")?.let(Uri::decode).orEmpty(),
+                envType = backStackEntry.arguments?.getString("envType")?.let(Uri::decode).orEmpty(),
+                onBackClick = navController::popBackStack,
+            )
+        }
     }
 }
 
@@ -89,6 +144,7 @@ fun AppNavHost(
 private fun MainTabsScreen(
     startupSettings: UserSettings,
     onNavigateToRepackAppList: () -> Unit,
+    onNavigateToHookConfig: (envType: String, packageName: String, appName: String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val tabs = remember(startupSettings) {
@@ -136,8 +192,15 @@ private fun MainTabsScreen(
             when (val tab = tabs[page]) {
                 AppRoute.NoEnvironment -> NoEnvironmentRoute(
                     onNavigateToRepackAppList = onNavigateToRepackAppList,
+                    onNavigateToHookConfig = { packageName, appName ->
+                        onNavigateToHookConfig("no_env", packageName, appName)
+                    },
                 )
-                AppRoute.Environment -> EnvironmentRoute()
+                AppRoute.Environment -> EnvironmentRoute(
+                    onNavigateToHookConfig = { packageName, appName ->
+                        onNavigateToHookConfig("with_env", packageName, appName)
+                    },
+                )
                 AppRoute.Settings -> SettingsRoute()
                 else -> TabTextPage(tab = tab)
             }

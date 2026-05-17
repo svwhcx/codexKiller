@@ -42,6 +42,7 @@ import com.svwh.tools.feature.environment.presentation.StaticInfoBanner
 @Composable
 fun NoEnvironmentRoute(
     onNavigateToRepackAppList: () -> Unit,
+    onNavigateToHookConfig: (packageName: String, appName: String) -> Unit,
     viewModel: NoEnvironmentViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -56,6 +57,7 @@ fun NoEnvironmentRoute(
             }
         },
         onAddClick = onNavigateToRepackAppList,
+        onAppClick = onNavigateToHookConfig,
     )
 }
 
@@ -65,6 +67,7 @@ private fun NoEnvironmentScreen(
     onSearchQueryChange: (String) -> Unit,
     onHookEnabledChange: (String, Boolean) -> Unit,
     onAddClick: () -> Unit,
+    onAppClick: (packageName: String, appName: String) -> Unit,
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -81,6 +84,7 @@ private fun NoEnvironmentScreen(
                 onSearchQueryChange = onSearchQueryChange,
                 onHookEnabledChange = onHookEnabledChange,
                 onAddClick = onAddClick,
+                onAppClick = onAppClick,
             )
         }
     }
@@ -102,6 +106,7 @@ private fun NoEnvironmentAppListCard(
     onSearchQueryChange: (String) -> Unit,
     onHookEnabledChange: (String, Boolean) -> Unit,
     onAddClick: () -> Unit,
+    onAppClick: (packageName: String, appName: String) -> Unit,
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -128,6 +133,7 @@ private fun NoEnvironmentAppListCard(
                         AppHookRow(
                             app = app,
                             onHookEnabledChange = onHookEnabledChange,
+                            onClick = { onAppClick(app.packageName, app.appName) },
                         )
                     }
                 }

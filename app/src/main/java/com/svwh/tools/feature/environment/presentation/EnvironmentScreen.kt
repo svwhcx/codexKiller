@@ -76,6 +76,7 @@ private val HookSwitchThumbSize = 22.dp
 
 @Composable
 fun EnvironmentRoute(
+    onNavigateToHookConfig: (packageName: String, appName: String) -> Unit,
     viewModel: EnvironmentViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -90,6 +91,7 @@ fun EnvironmentRoute(
                 viewModel.setHookEnabled(packageName, enabled)
             }
         },
+        onAppClick = onNavigateToHookConfig,
     )
 }
 
@@ -99,6 +101,7 @@ private fun EnvironmentScreen(
     onSearchQueryChange: (String) -> Unit,
     onShowSystemAppsChange: (Boolean) -> Unit,
     onHookEnabledChange: (String, Boolean) -> Unit,
+    onAppClick: (packageName: String, appName: String) -> Unit,
 ) {
     Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
@@ -116,6 +119,7 @@ private fun EnvironmentScreen(
                     onSearchQueryChange = onSearchQueryChange,
                     onShowSystemAppsChange = onShowSystemAppsChange,
                     onHookEnabledChange = onHookEnabledChange,
+                    onAppClick = onAppClick,
                 )
             }
         }
@@ -129,6 +133,7 @@ private fun EnvironmentAppListCard(
     onSearchQueryChange: (String) -> Unit,
     onShowSystemAppsChange: (Boolean) -> Unit,
     onHookEnabledChange: (String, Boolean) -> Unit,
+    onAppClick: (packageName: String, appName: String) -> Unit,
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -156,6 +161,7 @@ private fun EnvironmentAppListCard(
                         AppHookRow(
                             app = app,
                             onHookEnabledChange = onHookEnabledChange,
+                            onClick = { onAppClick(app.packageName, app.appName) },
                         )
                     }
                 }
@@ -418,9 +424,18 @@ internal fun SearchField(
 internal fun AppHookRow(
     app: InstalledAppItem,
     onHookEnabledChange: (String, Boolean) -> Unit,
+    onClick: (() -> Unit)? = null,
 ) {
+    val rowModifier = if (onClick == null) {
+        Modifier.fillMaxWidth()
+    } else {
+        Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+    }
+
     Surface(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = rowModifier,
         shape = RoundedCornerShape(8.dp),
         color = MaterialTheme.colorScheme.surface,
         shadowElevation = 0.dp,
