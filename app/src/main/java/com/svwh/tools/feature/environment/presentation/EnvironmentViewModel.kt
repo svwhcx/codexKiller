@@ -38,10 +38,7 @@ data class EnvironmentUiState(
                 }
             }
 
-            return filtered.sortedWith(
-                compareByDescending<InstalledAppItem> { it.hookEnabled }
-                    .thenByDescending { it.firstInstallTimeMillis },
-            )
+            return filtered
         }
 }
 

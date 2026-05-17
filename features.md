@@ -58,6 +58,7 @@
 - 页面入口位于 `feature/environment/presentation/EnvironmentScreen.kt`。
 - 应用读取和基础排序位于 `feature/environment/data/InstalledAppRepositoryImpl`，ViewModel 只编排 UI 状态。
 - Hook 状态按包名保存到 DataStore 的 `hooked_packages`。
+- Hook 排序只在加载应用列表时应用；加载完成后切换开关只更新当前项状态，不动态改变列表位置。
 - LSPosed 激活状态由 `core/environment/LsposedStatus` 提供，后续模块可在运行时更新该状态。
 - 读取已安装应用列表没有 Android 运行时权限弹窗；Android 11+ 依赖 `QUERY_ALL_PACKAGES` 和 `<queries>` 包可见性声明。
 - `QUERY_ALL_PACKAGES` 已声明用于完整读取应用列表；如面向应用商店分发，需要单独评估平台政策。
