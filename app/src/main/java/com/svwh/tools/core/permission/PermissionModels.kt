@@ -15,3 +15,9 @@ enum class PackageVisibilityAccess {
     QueryAllPackagesDeclared,
     LimitedVisibility,
 }
+
+sealed interface ExternalStorageAccessStatus {
+    data object Granted : ExternalStorageAccessStatus
+    data class RuntimePermissionRequired(val permission: String) : ExternalStorageAccessStatus
+    data object AllFilesAccessRequired : ExternalStorageAccessStatus
+}

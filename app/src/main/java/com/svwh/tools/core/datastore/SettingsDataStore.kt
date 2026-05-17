@@ -6,7 +6,6 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
-import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -44,18 +43,6 @@ class SettingsDataStore @Inject constructor(
             )
         }
 
-    val hookedPackages: Flow<Set<String>> = context.settingsDataStore.data
-        .catch { throwable ->
-            if (throwable is IOException) {
-                emit(emptyPreferences())
-            } else {
-                throw throwable
-            }
-        }
-        .map { preferences ->
-            preferences[Keys.HookedPackages] ?: emptySet()
-        }
-
     suspend fun setThemeMode(themeMode: ThemeMode) {
         context.settingsDataStore.edit { preferences ->
             preferences[Keys.ThemeMode] = themeMode.name
@@ -80,17 +67,6 @@ class SettingsDataStore @Inject constructor(
         }
     }
 
-    suspend fun setPackageHookEnabled(packageName: String, enabled: Boolean) {
-        context.settingsDataStore.edit { preferences ->
-            val currentPackages = preferences[Keys.HookedPackages].orEmpty()
-            preferences[Keys.HookedPackages] = if (enabled) {
-                currentPackages + packageName
-            } else {
-                currentPackages - packageName
-            }
-        }
-    }
-
     private fun runCatchingThemeMode(value: String): ThemeMode? {
         return runCatching { ThemeMode.valueOf(value) }.getOrNull()
     }
@@ -100,6 +76,5 @@ class SettingsDataStore @Inject constructor(
         val DynamicColor = booleanPreferencesKey("dynamic_color")
         val ShowNoEnvironmentTab = booleanPreferencesKey("show_no_environment_tab")
         val ShowEnvironmentTab = booleanPreferencesKey("show_environment_tab")
-        val HookedPackages = stringSetPreferencesKey("hooked_packages")
     }
 }

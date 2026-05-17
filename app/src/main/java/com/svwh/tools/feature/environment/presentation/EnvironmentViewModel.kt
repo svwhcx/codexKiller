@@ -2,8 +2,9 @@ package com.svwh.tools.feature.environment.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.svwh.tools.core.datastore.SettingsDataStore
 import com.svwh.tools.core.environment.LsposedStatus
+import com.svwh.tools.core.hook.HookEnvironmentType
+import com.svwh.tools.core.hook.HookStateRepository
 import com.svwh.tools.feature.environment.domain.model.InstalledAppItem
 import com.svwh.tools.feature.environment.domain.repository.InstalledAppRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -14,7 +15,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -44,8 +44,8 @@ data class EnvironmentUiState(
 
 @HiltViewModel
 class EnvironmentViewModel @Inject constructor(
-    private val settingsDataStore: SettingsDataStore,
     private val installedAppRepository: InstalledAppRepository,
+    private val hookStateRepository: HookStateRepository,
 ) : ViewModel() {
     private var loadAppsJob: Job? = null
 
@@ -75,12 +75,18 @@ class EnvironmentViewModel @Inject constructor(
 
     fun setHookEnabled(packageName: String, enabled: Boolean) {
         viewModelScope.launch {
-            settingsDataStore.setPackageHookEnabled(packageName, enabled)
+            val actualEnabled = withContext(Dispatchers.IO) {
+                hookStateRepository.setHookEnabled(
+                    packageName = packageName,
+                    environmentType = HookEnvironmentType.WithEnv,
+                    enabled = enabled,
+                )
+            }
             _uiState.update { state ->
                 state.copy(
                     apps = state.apps.map { app ->
                         if (app.packageName == packageName) {
-                            app.copy(hookEnabled = enabled)
+                            app.copy(hookEnabled = actualEnabled)
                         } else {
                             app
                         }
@@ -102,13 +108,23 @@ class EnvironmentViewModel @Inject constructor(
             }
 
             val apps = withContext(Dispatchers.IO) {
-                val hookedPackages = settingsDataStore.hookedPackages.first()
                 val loadedApps = installedAppRepository.getInstalledApps(
                     showSystemApps = showSystemApps,
-                    hookedPackages = hookedPackages,
+                    hookedPackages = emptySet(),
+                )
+                val enabledPackages = hookStateRepository.syncAndGetEnabledPackages(
+                    environmentType = HookEnvironmentType.WithEnv,
+                    packageNames = loadedApps.map { it.packageName }.toSet(),
                 )
                 delay(450)
                 loadedApps
+                    .map { app ->
+                        app.copy(hookEnabled = app.packageName in enabledPackages)
+                    }
+                    .sortedWith(
+                        compareByDescending<InstalledAppItem> { it.hookEnabled }
+                            .thenByDescending { it.firstInstallTimeMillis },
+                    )
             }
 
             _uiState.update { state ->

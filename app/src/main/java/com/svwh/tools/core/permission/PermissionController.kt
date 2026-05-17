@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
+import android.os.Environment
 import androidx.core.content.ContextCompat
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
@@ -47,5 +48,26 @@ class PermissionController @Inject constructor(
         } else {
             PackageVisibilityAccess.LimitedVisibility
         }
+    }
+
+    fun getExternalStorageAccessStatus(): ExternalStorageAccessStatus {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            return if (Environment.isExternalStorageManager()) {
+                ExternalStorageAccessStatus.Granted
+            } else {
+                ExternalStorageAccessStatus.AllFilesAccessRequired
+            }
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            val permission = Manifest.permission.WRITE_EXTERNAL_STORAGE
+            return if (getStatus(permission) == PermissionStatus.Granted) {
+                ExternalStorageAccessStatus.Granted
+            } else {
+                ExternalStorageAccessStatus.RuntimePermissionRequired(permission)
+            }
+        }
+
+        return ExternalStorageAccessStatus.Granted
     }
 }

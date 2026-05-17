@@ -27,6 +27,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.svwh.tools.core.permission.rememberExternalStoragePermissionGate
 import com.svwh.tools.feature.environment.presentation.AppHookRow
 import com.svwh.tools.feature.environment.presentation.AppListControlHeight
 import com.svwh.tools.feature.environment.presentation.AppListItemSpacing
@@ -44,11 +45,16 @@ fun NoEnvironmentRoute(
     viewModel: NoEnvironmentViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val storagePermissionGate = rememberExternalStoragePermissionGate()
 
     NoEnvironmentScreen(
         uiState = uiState,
         onSearchQueryChange = viewModel::setSearchQuery,
-        onHookEnabledChange = viewModel::setHookEnabled,
+        onHookEnabledChange = { packageName, enabled ->
+            storagePermissionGate.runAfterPermission {
+                viewModel.setHookEnabled(packageName, enabled)
+            }
+        },
         onAddClick = onNavigateToRepackAppList,
     )
 }

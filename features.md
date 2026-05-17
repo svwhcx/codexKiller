@@ -50,14 +50,14 @@
 - LSPosed 未启用提示使用浅红渐变警告条，左侧展示警告图标，文案直接提示 Hook 开关仅保存配置。
 - 应用列表区域使用白色 card 容器，搜索框右侧为轻量 `筛选` 按钮。
 - 应用项展示图标、应用名称、包名和自定义 Hook 开关；开启后开关轨道为绿色，应用名称绿色高亮。
-- Hook 开关使用 DataStore 持久化；开启后应用名称使用绿色高亮。
+- Hook 开关使用 SQLite/Room 与状态文件持久化；开启后应用名称使用绿色高亮。
 - 加载应用列表时在列表 card 内展示行内 loading，不使用 dialog 弹窗；即使读取很快也保持短暂 loading 反馈。
 
 实现约定：
 
 - 页面入口位于 `feature/environment/presentation/EnvironmentScreen.kt`。
 - 应用读取和基础排序位于 `feature/environment/data/InstalledAppRepositoryImpl`，ViewModel 只编排 UI 状态。
-- Hook 状态按包名保存到 DataStore 的 `hooked_packages`。
+- Hook 状态按 `packageName + envType` 保存到 SQLite，并同步对应状态文件。
 - Hook 排序只在加载应用列表时应用；加载完成后切换开关只更新当前项状态，不动态改变列表位置。
 - LSPosed 激活状态由 `core/environment/LsposedStatus` 提供，后续模块可在运行时更新该状态。
 - 读取已安装应用列表没有 Android 运行时权限弹窗；Android 11+ 依赖 `QUERY_ALL_PACKAGES` 和 `<queries>` 包可见性声明。
@@ -80,3 +80,29 @@
 - 页面入口位于 `feature/noenvironment/presentation/NoEnvironmentScreen.kt`。
 - 当前复用 `InstalledAppRepository` 加载用户应用。
 - 通用应用列表 UI 复用 `feature/environment/presentation` 中的搜索框、应用项、Hook 开关和 loading 组件。
+
+## Hook 状态存储
+
+Hook 状态使用 SQLite/Room 和文件系统双通道管理：
+
+- 数据库表：`hook_states`。
+- 唯一维度：`packageName + envType`。
+- 环境类型：`with_env` 表示有环境，`no_env` 表示无环境。
+- 状态文件目录：`Android/media/<目标应用包名>/stool/`。
+- 有环境开启文件：`with_env_enable.s`。
+- 无环境开启文件：`no_env_enable.s`。
+- 加载应用列表时读取状态文件，并把文件存在与否同步回 SQLite。
+- 数据库初始为空时，若状态文件不存在，开关默认关闭。
+- 切换开关时同时更新 SQLite 和对应状态文件；UI 使用文件操作后的实际结果刷新当前项。
+- Android 11+ 文件写入依赖所有文件访问授权，后续统一通过 `core/permission` 接入授权入口。
+
+## 权限：外部存储访问
+
+Hook 状态文件写入走统一权限门：
+
+- 入口：`core/permission/ExternalStoragePermissionGate.kt`。
+- Android 6-10：通过系统运行时权限弹窗申请 `WRITE_EXTERNAL_STORAGE`。
+- Android 11+：先展示 App 内说明弹窗，再跳转系统 `所有文件访问权限` 页面。
+- 权限通过后才执行 Hook 开关写入逻辑。
+- 无环境、有环境页面共用同一套授权流程。
+- 权限弹窗 UI 封装为 `PermissionRequestDialog`，后续其他权限可复用同一视觉组件。

@@ -46,6 +46,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.graphics.drawable.toBitmap
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.svwh.tools.core.permission.rememberExternalStoragePermissionGate
 import com.svwh.tools.feature.environment.domain.model.InstalledAppItem
 
 private val SuccessGreen = Color(0xFF2E7D32)
@@ -78,12 +79,17 @@ fun EnvironmentRoute(
     viewModel: EnvironmentViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val storagePermissionGate = rememberExternalStoragePermissionGate()
 
     EnvironmentScreen(
         uiState = uiState,
         onSearchQueryChange = viewModel::setSearchQuery,
         onShowSystemAppsChange = viewModel::setShowSystemApps,
-        onHookEnabledChange = viewModel::setHookEnabled,
+        onHookEnabledChange = { packageName, enabled ->
+            storagePermissionGate.runAfterPermission {
+                viewModel.setHookEnabled(packageName, enabled)
+            }
+        },
     )
 }
 
@@ -178,7 +184,7 @@ private fun LsposedStatusCard(enabled: Boolean) {
     val message = if (enabled) {
         "当前已检测到 LSPosed 激活状态，可以执行 Hook 分析。"
     } else {
-        "当前未检测到 LSPosed 激活状态，Hook 开关仅保存配置。"
+        "当前未检测到 LSPosed 激活状态，功能将不可用"
     }
 
     val background = if (enabled) {
