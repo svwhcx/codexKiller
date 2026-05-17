@@ -159,18 +159,41 @@ internal fun HookLogPage() {
             onAutoScrollChange = { autoScroll = it },
         )
 
-        RefreshableList(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f),
-            isRefreshing = isRefreshing,
-            onRefresh = ::refreshFirstPage,
-            isLoadingMore = loadMoreState == LoadMoreStatus.Loading,
-            onLoadMore = ::loadNextPage,
-            hasMoreData = visibleCount < filteredLogs.size,
-        ) {
-            items(visibleLogs, key = { it.id }) {
-                HookLogRow(log = it)
+        if (filteredLogs.isEmpty()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.BugReport,
+                    contentDescription = "无日志数据",
+                    tint = LogTextSecondary,
+                    modifier = Modifier.size(36.dp)
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = "暂无日志数据",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = LogTextSecondary
+                )
+            }
+        } else {
+            RefreshableList(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+                isRefreshing = isRefreshing,
+                onRefresh = ::refreshFirstPage,
+                isLoadingMore = loadMoreState == LoadMoreStatus.Loading,
+                onLoadMore = ::loadNextPage,
+                hasMoreData = visibleCount < filteredLogs.size,
+            ) {
+                items(visibleLogs, key = { it.id }) {
+                    HookLogRow(log = it)
+                }
             }
         }
     }
