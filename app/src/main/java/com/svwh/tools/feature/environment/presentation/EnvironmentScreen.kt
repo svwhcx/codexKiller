@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -17,6 +18,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ErrorOutline
@@ -103,27 +105,21 @@ private fun EnvironmentScreen(
     onHookEnabledChange: (String, Boolean) -> Unit,
     onAppClick: (packageName: String, appName: String) -> Unit,
 ) {
-    Box(modifier = Modifier.fillMaxSize()) {
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(horizontal = 15.dp, vertical = 10.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            item {
-                LsposedStatusCard(enabled = uiState.lsposedEnabled)
-            }
+    Column(
+        modifier = Modifier.fillMaxSize()
+    ) {
+        LsposedStatusCard(enabled = uiState.lsposedEnabled)
 
-            item {
-                EnvironmentAppListCard(
-                    uiState = uiState,
-                    onSearchQueryChange = onSearchQueryChange,
-                    onShowSystemAppsChange = onShowSystemAppsChange,
-                    onHookEnabledChange = onHookEnabledChange,
-                    onAppClick = onAppClick,
-                )
-            }
-        }
+        Spacer(modifier = Modifier.height(12.dp)) // Add some space between banner and card
 
+        EnvironmentAppListCard(
+            uiState = uiState,
+            onSearchQueryChange = onSearchQueryChange,
+            onShowSystemAppsChange = onShowSystemAppsChange,
+            onHookEnabledChange = onHookEnabledChange,
+            onAppClick = onAppClick,
+            modifier = Modifier.weight(1f)
+        )
     }
 }
 
@@ -134,16 +130,16 @@ private fun EnvironmentAppListCard(
     onShowSystemAppsChange: (Boolean) -> Unit,
     onHookEnabledChange: (String, Boolean) -> Unit,
     onAppClick: (packageName: String, appName: String) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     Surface(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(10.dp),
         color = ListContainer,
         shadowElevation = 1.dp,
     ) {
         Column(
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             EnvironmentControls(
                 searchQuery = uiState.searchQuery,
@@ -153,22 +149,16 @@ private fun EnvironmentAppListCard(
                 onShowSystemAppsChange = onShowSystemAppsChange,
             )
 
+            Spacer(modifier = Modifier.height(8.dp))
+
             if (uiState.isLoading) {
-                InlineLoadingRow()
+                InlineLoadingRow(modifier = Modifier.weight(1f))
             } else {
-                Column(verticalArrangement = Arrangement.spacedBy(AppListItemSpacing)) {
-                    uiState.filteredApps.forEach { app ->
-                        AppHookRow(
-                            app = app,
-                            onHookEnabledChange = onHookEnabledChange,
-                            onClick = { onAppClick(app.packageName, app.appName) },
-                        )
-                    }
-                }
                 if (uiState.filteredApps.isEmpty()) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .weight(1f)
                             .height(160.dp),
                         contentAlignment = Alignment.Center,
                     ) {
@@ -177,6 +167,21 @@ private fun EnvironmentAppListCard(
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(AppListItemSpacing),
+                    ) {
+                        items(items = uiState.filteredApps, key = { appItem: InstalledAppItem -> appItem.packageName }) { app: InstalledAppItem ->
+                            AppHookRow(
+                                app = app,
+                                onHookEnabledChange = onHookEnabledChange,
+                                onClick = { onAppClick(app.packageName, app.appName) },
+                            )
+                        }
                     }
                 }
             }
@@ -522,9 +527,11 @@ internal fun HookSwitch(
 }
 
 @Composable
-internal fun InlineLoadingRow() {
+internal fun InlineLoadingRow(
+    modifier: Modifier = Modifier,
+) {
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .height(150.dp),
         horizontalArrangement = Arrangement.Center,

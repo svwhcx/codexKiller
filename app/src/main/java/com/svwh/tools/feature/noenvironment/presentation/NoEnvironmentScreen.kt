@@ -6,12 +6,15 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
@@ -29,6 +32,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.svwh.tools.core.permission.rememberExternalStoragePermissionGate
 import com.svwh.tools.feature.environment.presentation.AppHookRow
+import com.svwh.tools.feature.environment.domain.model.InstalledAppItem
 import com.svwh.tools.feature.environment.presentation.AppListControlHeight
 import com.svwh.tools.feature.environment.presentation.AppListItemSpacing
 import com.svwh.tools.feature.environment.presentation.InlineLoadingRow
@@ -37,6 +41,8 @@ import com.svwh.tools.feature.environment.presentation.NoEnvironmentContainerEnd
 import com.svwh.tools.feature.environment.presentation.NoEnvironmentContainerStart
 import com.svwh.tools.feature.environment.presentation.NoEnvironmentGreen
 import com.svwh.tools.feature.environment.presentation.SearchField
+import com.svwh.tools.feature.environment.presentation.StaticInfoBanner
+
 import com.svwh.tools.feature.environment.presentation.StaticInfoBanner
 
 @Composable
@@ -69,24 +75,21 @@ private fun NoEnvironmentScreen(
     onAddClick: () -> Unit,
     onAppClick: (packageName: String, appName: String) -> Unit,
 ) {
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(horizontal = 15.dp, vertical = 10.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+    Column(
+        modifier = Modifier.fillMaxSize()
     ) {
-        item {
-            NoEnvironmentInfoBanner()
-        }
+        NoEnvironmentInfoBanner()
 
-        item {
-            NoEnvironmentAppListCard(
-                uiState = uiState,
-                onSearchQueryChange = onSearchQueryChange,
-                onHookEnabledChange = onHookEnabledChange,
-                onAddClick = onAddClick,
-                onAppClick = onAppClick,
-            )
-        }
+        Spacer(modifier = Modifier.height(12.dp)) // Add some space between banner and card
+
+        NoEnvironmentAppListCard(
+            uiState = uiState,
+            onSearchQueryChange = onSearchQueryChange,
+            onHookEnabledChange = onHookEnabledChange,
+            onAddClick = onAddClick,
+            onAppClick = onAppClick,
+            modifier = Modifier.weight(1f)
+        )
     }
 }
 
@@ -107,16 +110,16 @@ private fun NoEnvironmentAppListCard(
     onHookEnabledChange: (String, Boolean) -> Unit,
     onAddClick: () -> Unit,
     onAppClick: (packageName: String, appName: String) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     Surface(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(10.dp),
         color = ListContainer,
         shadowElevation = 1.dp,
     ) {
         Column(
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             NoEnvironmentControls(
                 searchQuery = uiState.searchQuery,
@@ -125,22 +128,16 @@ private fun NoEnvironmentAppListCard(
                 onAddClick = onAddClick,
             )
 
+            Spacer(modifier = Modifier.height(8.dp))
+
             if (uiState.isLoading) {
-                InlineLoadingRow()
+                InlineLoadingRow(modifier = Modifier.weight(1f))
             } else {
-                Column(verticalArrangement = Arrangement.spacedBy(AppListItemSpacing)) {
-                    uiState.filteredApps.forEach { app ->
-                        AppHookRow(
-                            app = app,
-                            onHookEnabledChange = onHookEnabledChange,
-                            onClick = { onAppClick(app.packageName, app.appName) },
-                        )
-                    }
-                }
                 if (uiState.filteredApps.isEmpty()) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .weight(1f)
                             .height(160.dp),
                         contentAlignment = Alignment.Center,
                     ) {
@@ -149,6 +146,21 @@ private fun NoEnvironmentAppListCard(
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(AppListItemSpacing),
+                    ) {
+                        items(items = uiState.filteredApps, key = { appItem: InstalledAppItem -> appItem.packageName }) { app: InstalledAppItem ->
+                            AppHookRow(
+                                app = app,
+                                onHookEnabledChange = onHookEnabledChange,
+                                onClick = { onAppClick(app.packageName, app.appName) },
+                            )
+                        }
                     }
                 }
             }
