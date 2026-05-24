@@ -1,0 +1,28 @@
+package com.svwh.tools.feature.hookconfig.domain.repository
+
+import com.svwh.tools.core.common.AppResult
+import com.svwh.tools.feature.hookconfig.domain.model.HookLogPageResult
+import com.svwh.tools.feature.hookconfig.domain.model.HookLogQuery
+import com.svwh.tools.feature.hookconfig.domain.model.HookLogRecord
+import com.svwh.tools.feature.hookconfig.domain.model.HookLogTypeOption
+
+interface HookLogRepository {
+    suspend fun queryLogs(query: HookLogQuery): AppResult<HookLogPageResult>
+
+    suspend fun queryLogDetail(
+        envType: String,
+        packageName: String,
+        id: Long,
+    ): AppResult<HookLogRecord?>
+
+    suspend fun deleteAll(
+        envType: String,
+        packageName: String,
+        selectedTypes: Set<Int>,
+    ): AppResult<Unit>
+
+    suspend fun queryAvailableTypes(
+        envType: String,
+        packageName: String,
+    ): AppResult<List<HookLogTypeOption>>
+}

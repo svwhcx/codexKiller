@@ -20,3 +20,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "STool"
 include(":app")
+include(":noenv-hook-runtime")

@@ -5,7 +5,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -15,29 +14,31 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.BugReport
-import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.FilterList
 import androidx.compose.material.icons.outlined.Refresh
-import androidx.compose.material.icons.outlined.Save
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Tune
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -49,93 +50,32 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.svwh.tools.ui.components.RefreshableList
-import com.svwh.tools.ui.components.LoadMoreStatus
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.svwh.tools.feature.environment.presentation.HookSwitch
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+import com.svwh.tools.feature.hookconfig.domain.model.HookLogRecord
+import com.svwh.tools.feature.hookconfig.domain.model.HookLogTypeOption
+import com.svwh.tools.ui.components.RefreshableList
 
 private val LogSearchBackground = Color(0xFFF8FAFE)
 private val LogSearchActionBackground = Color(0xFFF0F4FB)
 private val LogTextPrimary = Color(0xFF2F3747)
 private val LogTextSecondary = Color(0xFF6C768A)
 private val LogControlCornerRadius = 10.dp
-private const val LogPageSize = 100
 
 @Composable
-internal fun HookLogPage() {
-    val coroutineScope = rememberCoroutineScope()
-    var searchInput by rememberSaveable { mutableStateOf("") }
-    var submittedSearchQuery by rememberSaveable { mutableStateOf("") }
-    var errorOnly by rememberSaveable { mutableStateOf(false) }
+internal fun HookLogPage(
+    envType: String,
+    packageName: String,
+    viewModel: HookLogViewModel = hiltViewModel(),
+) {
+    val uiState by viewModel.uiState.collectAsState()
     var autoScroll by rememberSaveable { mutableStateOf(true) }
-    var visibleCount by rememberSaveable { mutableIntStateOf(LogPageSize) }
-    var isRefreshing by rememberSaveable { mutableStateOf(false) }
-    var loadMoreState by rememberSaveable { mutableStateOf(LoadMoreStatus.Idle) }
-    val logs = remember { buildPagedSampleLogs(sampleHookLogs()) }
-    val filteredLogs = remember(submittedSearchQuery, errorOnly, logs) {
-        logs.filter { log ->
-            val matchesLevel = !errorOnly || log.level == HookLogLevel.Error
-            val matchesQuery = submittedSearchQuery.isBlank() ||
-                log.title.contains(submittedSearchQuery, ignoreCase = true) ||
-                log.className.contains(submittedSearchQuery, ignoreCase = true) ||
-                log.target.contains(submittedSearchQuery, ignoreCase = true)
-            matchesLevel && matchesQuery
-        }
-    }
-    val visibleLogs = remember(filteredLogs, visibleCount) {
-        filteredLogs.take(visibleCount)
-    }
+    var showTypeFilterDialog by rememberSaveable { mutableStateOf(false) }
 
-    fun resetPaging() {
-        visibleCount = LogPageSize
-        loadMoreState = LoadMoreStatus.Idle
-    }
-
-    fun showNoMoreTemporarily() {
-        loadMoreState = LoadMoreStatus.NoMoreData
-        coroutineScope.launch {
-            delay(2_000)
-            if (loadMoreState == LoadMoreStatus.NoMoreData) {
-                loadMoreState = LoadMoreStatus.Idle
-            }
-        }
-    }
-
-    fun refreshFirstPage() {
-        if (isRefreshing) return
-        isRefreshing = true
-        coroutineScope.launch {
-            delay(650)
-            visibleCount = LogPageSize
-            loadMoreState = LoadMoreStatus.Idle
-            isRefreshing = false
-        }
-    }
-
-    fun loadNextPage() {
-        if (isRefreshing || loadMoreState == LoadMoreStatus.Loading) return
-
-        if (visibleCount >= filteredLogs.size) {
-            loadMoreState = LoadMoreStatus.Loading
-            coroutineScope.launch {
-                delay(500)
-                showNoMoreTemporarily()
-            }
-            return
-        }
-
-        loadMoreState = LoadMoreStatus.Loading
-        coroutineScope.launch {
-            delay(850)
-            val nextCount = (visibleCount + LogPageSize).coerceAtMost(filteredLogs.size)
-            visibleCount = nextCount
-            if (nextCount >= filteredLogs.size) {
-                showNoMoreTemporarily()
-            } else {
-                loadMoreState = LoadMoreStatus.Idle
-            }
-        }
+    LaunchedEffect(envType, packageName) {
+        viewModel.initialize(envType = envType, packageName = packageName)
     }
 
     Column(
@@ -144,69 +84,88 @@ internal fun HookLogPage() {
             .background(Color.White),
     ) {
         HookLogToolbar(
-            searchQuery = searchInput,
-            onSearchQueryChange = { searchInput = it },
-            onSearchClick = {
-                submittedSearchQuery = searchInput.trim()
-                resetPaging()
-            },
-            errorOnly = errorOnly,
+            searchQuery = uiState.searchInput,
+            selectedTypeCount = uiState.selectedTypes.size,
+            onSearchQueryChange = viewModel::updateSearchInput,
+            onSearchClick = viewModel::submitSearch,
             autoScroll = autoScroll,
-            onErrorOnlyChange = {
-                errorOnly = it
-                resetPaging()
-            },
+            onRefreshClick = viewModel::refresh,
+            onOpenTypeFilter = { showTypeFilterDialog = true },
             onAutoScrollChange = { autoScroll = it },
         )
 
-        if (filteredLogs.isEmpty()) {
-            Column(
+        if (uiState.isEmpty) {
+            HookLogEmptyState(
+                envType = uiState.envType,
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.BugReport,
-                    contentDescription = "无日志数据",
-                    tint = LogTextSecondary,
-                    modifier = Modifier.size(36.dp)
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = "暂无日志数据",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = LogTextSecondary
-                )
-            }
+            )
         } else {
             RefreshableList(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f),
-                isRefreshing = isRefreshing,
-                onRefresh = ::refreshFirstPage,
-                isLoadingMore = loadMoreState == LoadMoreStatus.Loading,
-                onLoadMore = ::loadNextPage,
-                hasMoreData = visibleCount < filteredLogs.size,
+                isRefreshing = uiState.isRefreshing,
+                onRefresh = viewModel::refresh,
+                isLoadingMore = uiState.isLoadingMore,
+                onLoadMore = viewModel::loadMore,
+                hasMoreData = uiState.hasMore,
             ) {
-                items(visibleLogs, key = { it.id }) {
-                    HookLogRow(log = it)
+                items(uiState.logs, key = { it.id }) { log ->
+                    HookLogRow(log = log)
                 }
             }
         }
+    }
+
+    if (showTypeFilterDialog) {
+        HookLogTypeFilterDialog(
+            options = uiState.availableTypes,
+            selectedTypes = uiState.selectedTypes,
+            onDismiss = { showTypeFilterDialog = false },
+            onConfirm = { selectedTypes ->
+                showTypeFilterDialog = false
+                viewModel.applySelectedTypes(selectedTypes)
+            },
+        )
+    }
+}
+
+@Composable
+private fun HookLogEmptyState(
+    envType: String,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Icon(
+            imageVector = Icons.Outlined.BugReport,
+            contentDescription = "暂无日志数据",
+            tint = LogTextSecondary,
+            modifier = Modifier.size(36.dp),
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            text = if (envType == "no_env") "暂无无环境日志数据" else "暂无有环境日志数据",
+            style = MaterialTheme.typography.titleMedium,
+            color = LogTextSecondary,
+        )
     }
 }
 
 @Composable
 private fun HookLogToolbar(
     searchQuery: String,
+    selectedTypeCount: Int,
     onSearchQueryChange: (String) -> Unit,
     onSearchClick: () -> Unit,
-    errorOnly: Boolean,
     autoScroll: Boolean,
-    onErrorOnlyChange: (Boolean) -> Unit,
+    onRefreshClick: () -> Unit,
+    onOpenTypeFilter: () -> Unit,
     onAutoScrollChange: (Boolean) -> Unit,
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
@@ -247,14 +206,17 @@ private fun HookLogToolbar(
 
             HookLogMenu(
                 expanded = menuExpanded,
-                errorOnly = errorOnly,
                 autoScroll = autoScroll,
+                selectedTypeCount = selectedTypeCount,
                 onDismiss = { menuExpanded = false },
-                onSearchClick = {
-                    onSearchClick()
+                onRefreshClick = {
+                    onRefreshClick()
                     menuExpanded = false
                 },
-                onErrorOnlyChange = onErrorOnlyChange,
+                onTypeFilterClick = {
+                    onOpenTypeFilter()
+                    menuExpanded = false
+                },
                 onAutoScrollChange = onAutoScrollChange,
             )
         }
@@ -288,7 +250,7 @@ private fun HookLogSearchField(
                 ) {
                     if (value.isBlank()) {
                         Text(
-                            text = "搜索日志关键词",
+                            text = "搜索日志关键字",
                             style = MaterialTheme.typography.bodyMedium,
                             color = HookConfigMutedText,
                         )
@@ -330,11 +292,11 @@ private fun HookLogSearchField(
 @Composable
 private fun HookLogMenu(
     expanded: Boolean,
-    errorOnly: Boolean,
     autoScroll: Boolean,
+    selectedTypeCount: Int,
     onDismiss: () -> Unit,
-    onSearchClick: () -> Unit,
-    onErrorOnlyChange: (Boolean) -> Unit,
+    onRefreshClick: () -> Unit,
+    onTypeFilterClick: () -> Unit,
     onAutoScrollChange: (Boolean) -> Unit,
 ) {
     DropdownMenu(
@@ -350,28 +312,17 @@ private fun HookLogMenu(
                 .padding(vertical = 8.dp),
         ) {
             HookLogMenuAction(
-                icon = Icons.Outlined.Delete,
-                title = "清空日志",
-                onClick = onDismiss,
-            )
-            HookLogMenuAction(
-                icon = Icons.Outlined.Save,
-                title = "导出日志",
-                onClick = onDismiss,
-            )
-            HookLogMenuAction(
-                icon = Icons.Outlined.Search,
-                title = "搜索日志",
-                onClick = onSearchClick,
+                icon = Icons.Outlined.Refresh,
+                title = "刷新日志",
+                onClick = onRefreshClick,
             )
             HookLogMenuAction(
                 icon = Icons.Outlined.FilterList,
-                title = "仅显示 Error",
-                highlightTail = "Error",
-                onClick = { onErrorOnlyChange(!errorOnly) },
+                title = if (selectedTypeCount > 0) "筛选日志类型 ($selectedTypeCount)" else "筛选日志类型",
+                onClick = onTypeFilterClick,
             )
             HookLogMenuSwitchAction(
-                icon = Icons.Outlined.Refresh,
+                icon = Icons.Outlined.CheckCircle,
                 title = "自动滚动",
                 checked = autoScroll,
                 onCheckedChange = onAutoScrollChange,
@@ -385,7 +336,6 @@ private fun HookLogMenuAction(
     icon: ImageVector,
     title: String,
     onClick: () -> Unit,
-    highlightTail: String? = null,
 ) {
     Row(
         modifier = Modifier
@@ -401,20 +351,12 @@ private fun HookLogMenuAction(
             tint = LogTextPrimary,
             modifier = Modifier.size(24.dp),
         )
-        Row(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title.removeSuffix(highlightTail.orEmpty()),
-                style = MaterialTheme.typography.titleMedium,
-                color = LogTextPrimary,
-            )
-            if (highlightTail != null) {
-                Text(
-                    text = highlightTail,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = Color(0xFFE53935),
-                )
-            }
-        }
+        Text(
+            text = title,
+            modifier = Modifier.weight(1f),
+            style = MaterialTheme.typography.titleMedium,
+            color = LogTextPrimary,
+        )
     }
 }
 
@@ -453,8 +395,138 @@ private fun HookLogMenuSwitchAction(
 }
 
 @Composable
-private fun HookLogRow(log: HookLogItem) {
-    val levelColor = log.level.color
+private fun HookLogTypeFilterDialog(
+    options: List<HookLogTypeOption>,
+    selectedTypes: Set<Int>,
+    onDismiss: () -> Unit,
+    onConfirm: (Set<Int>) -> Unit,
+) {
+    var pendingSelection by remember(selectedTypes, options) {
+        mutableStateOf(selectedTypes.intersect(options.map { it.type }.toSet()))
+    }
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(
+            dismissOnBackPress = true,
+            dismissOnClickOutside = true,
+        ),
+    ) {
+        Surface(
+            shape = RoundedCornerShape(24.dp),
+            color = Color.White,
+            tonalElevation = 8.dp,
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 20.dp),
+            ) {
+                Text(
+                    text = "筛选日志类型",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = LogTextPrimary,
+                    fontWeight = FontWeight.SemiBold,
+                    textAlign = TextAlign.Center,
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "参考旧版日志页逻辑，这里展示完整 Hook 类型列表，不依赖当前是否已有日志",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = HookConfigMutedText,
+                    textAlign = TextAlign.Center,
+                )
+                Spacer(modifier = Modifier.height(18.dp))
+
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(320.dp),
+                ) {
+                    items(options, key = { it.type }) { option ->
+                        HookLogTypeFilterRow(
+                            option = option,
+                            checked = option.type in pendingSelection,
+                            onCheckedChange = {
+                                pendingSelection = if (option.type in pendingSelection) {
+                                    pendingSelection - option.type
+                                } else {
+                                    pendingSelection + option.type
+                                }
+                            },
+                        )
+                    }
+                }
+
+                HorizontalDivider(color = HookConfigDivider)
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    TextButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Text(text = "取消")
+                    }
+                    TextButton(
+                        onClick = { pendingSelection = emptySet() },
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Text(text = "清空")
+                    }
+                    TextButton(
+                        onClick = { onConfirm(pendingSelection) },
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Text(text = "确定")
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun HookLogTypeFilterRow(
+    option: HookLogTypeOption,
+    checked: Boolean,
+    onCheckedChange: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onCheckedChange)
+            .padding(horizontal = 18.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = option.title,
+            modifier = Modifier.weight(1f),
+            style = MaterialTheme.typography.bodyMedium,
+            color = LogTextPrimary,
+        )
+        Checkbox(
+            checked = checked,
+            onCheckedChange = { onCheckedChange() },
+        )
+    }
+}
+
+@Composable
+private fun HookLogRow(log: HookLogRecord) {
+    val levelColor = when {
+        log.status != null && log.status != 0 -> Color(0xFFE84C55)
+        log.typeLabel.contains("文件") -> Color(0xFF37C878)
+        log.typeLabel.contains("弹窗") -> Color(0xFFFF8A2A)
+        else -> Color(0xFF4D73E6)
+    }
 
     Row(
         modifier = Modifier
@@ -493,12 +565,12 @@ private fun HookLogRow(log: HookLogItem) {
                     modifier = Modifier.weight(1f),
                     style = MaterialTheme.typography.bodyMedium,
                     color = LogTextPrimary,
-                    fontWeight = FontWeight.SemiBold,
+                    fontWeight = if (log.isRead) FontWeight.Medium else FontWeight.SemiBold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
-                    text = formatHookLogTime(log.timestampMillis),
+                    text = log.time,
                     style = MaterialTheme.typography.bodySmall,
                     color = LogTextSecondary,
                     maxLines = 1,
@@ -509,8 +581,17 @@ private fun HookLogRow(log: HookLogItem) {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(18.dp),
             ) {
-                HookLogMetaText(label = "类名：", value = log.className)
-                HookLogMetaText(label = log.targetLabel, value = log.target)
+                HookLogMetaText(label = "类型：", value = log.typeLabel)
+                HookLogMetaText(label = "包名：", value = log.packageName)
+            }
+            if (log.content.isNotBlank()) {
+                Text(
+                    text = log.content.replace('\n', ' '),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = LogTextSecondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
         }
     }
@@ -533,16 +614,4 @@ private fun HookLogMetaText(
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
     )
-}
-
-private fun buildPagedSampleLogs(baseLogs: List<HookLogItem>): List<HookLogItem> {
-    if (baseLogs.isEmpty()) return emptyList()
-
-    return List(235) { index ->
-        val source = baseLogs[index % baseLogs.size]
-        source.copy(
-            id = "${source.id}-$index",
-            timestampMillis = source.timestampMillis - index * 37_000L,
-        )
-    }
 }

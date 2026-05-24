@@ -117,3 +117,17 @@ Hook 状态文件写入走统一权限门：
 - `日志` 页签首版绘制搜索框、右侧菜单 Pop、预设日志动作、自动滚动开关、日志列表和时间格式化展示；日志行隐藏 info/warn 徽标，仅保留等级色图标与内容摘要。
 - Hook 配置页拆分为壳页面、快捷配置页、日志页、占位页、模型/样板数据多个文件；日志搜索输入不实时过滤，点击搜索框 suffix 搜索图标或菜单搜索项后才提交查询，便于后续替换为数据库搜索。
 - 日志列表接入通用 `RefreshLoadMoreLazyColumn`：支持下拉刷新第一页 100 条、底部指数阻尼上拉、松手回弹显示加载项、惯性滚动到底自动触发加载更多、无更多时显示 2 秒后收起。
+
+## 无环境 Hook Runtime 子模块
+
+- 新增 `:noenv-hook-runtime` 子模块，用于承载无环境重打包后注入目标 App 的 Hook runtime，不再依赖外部独立工程手动打 dex。
+- 模块移除独立 App 壳思路，不再保留启动 Activity/UI 资源，仅保留 runtime Java Hook 逻辑与最小 Manifest。
+- 引入 Pine runtime 依赖 `top.canyie.pine:core:0.3.0`，并通过版本目录统一管理，避免旧工程依赖版本漂移。
+- 提供 Gradle 产物任务：`:noenv-hook-runtime:packageNoEnvHookDexDebug` 和 `:noenv-hook-runtime:packageNoEnvHookDexRelease`，输出 `stool-noenv-hook-*.dex`。
+- 无环境启用状态文件统一调整为目标 App 的 `Android/media/<目标包名>/stool/no_env_enable.s`，和 STool 主 App 的 Hook 状态文件协议保持一致。
+
+## 无环境 Runtime 当前接入约束
+
+- `:noenv-hook-runtime` 当前仅作为独立 Hook runtime 子工程保留，用于继续开发和单独产出 dex。
+- 主 `app` 模块不再自动依赖 runtime dex，不再将 runtime dex 同步到 assets，也不再通过内置 provider 接入重打包 workflow。
+- 后续由外部 dex 合并/注入程序消费 runtime dex，将多个 dex 合并为单个 dex 后，再接入无环境重打包逻辑。

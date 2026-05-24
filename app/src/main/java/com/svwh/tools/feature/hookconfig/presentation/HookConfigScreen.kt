@@ -6,46 +6,41 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material.icons.outlined.Refresh
-import androidx.compose.material.icons.outlined.Save
-import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Upload
-import androidx.compose.material.icons.outlined.Save
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -64,6 +59,7 @@ fun HookConfigRoute(
     packageName: String,
     envType: String,
     onBackClick: () -> Unit,
+    onNavigateToUserConfigEditor: (envType: String, packageName: String, configId: Long, appName: String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val tabs = remember {
@@ -108,15 +104,27 @@ fun HookConfigRoute(
             ) { page ->
                 when (tabs[page]) {
                     HookConfigTab.Quick -> QuickConfigPage()
-                    HookConfigTab.User -> PlaceholderConfigPage(
-                        title = "用户配置",
-                        message = "后续用于展示自定义 class、方法签名、参数和变量修改规则。",
+                    HookConfigTab.User -> UserHookConfigPage(
+                        envType = envType,
+                        packageName = packageName,
+                        appName = appName.ifBlank { packageName },
+                        onNavigateToEditor = { configId ->
+                            onNavigateToUserConfigEditor(
+                                envType,
+                                packageName,
+                                configId,
+                                appName.ifBlank { packageName },
+                            )
+                        },
                     )
                     HookConfigTab.Frida -> PlaceholderConfigPage(
                         title = "Frida",
                         message = "后续用于管理 Frida 脚本、注入参数和运行状态。",
                     )
-                    HookConfigTab.Log -> HookLogPage()
+                    HookConfigTab.Log -> HookLogPage(
+                        envType = envType,
+                        packageName = packageName,
+                    )
                 }
             }
         }
@@ -203,29 +211,24 @@ private fun HookConfigHeader(
                             shadowElevation = 10.dp,
                             shape = RoundedCornerShape(18.dp),
                         ) {
-                            Column(modifier = Modifier.padding(0.dp)) {
-                                DropdownMenuItem(
-                                    text = { Text("启动") },
-                                    onClick = { /* TODO: Handle Start action */ menuExpanded = false },
-                                    leadingIcon = { Icon(Icons.Outlined.PlayArrow, contentDescription = null) },
-                                    // Reduce item padding
-                                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
-                                )
-                                DropdownMenuItem(
-                                    text = { Text("重启") },
-                                    onClick = { /* TODO: Handle Restart action */ menuExpanded = false },
-                                    leadingIcon = { Icon(Icons.Outlined.Refresh, contentDescription = null) },
-                                    // Reduce item padding
-                                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
-                                )
-                                DropdownMenuItem(
-                                    text = { Text("导出") },
-                                    onClick = { /* TODO: Handle Export action */ menuExpanded = false },
-                                    leadingIcon = { Icon(Icons.Outlined.Upload, contentDescription = null) },
-                                    // Reduce item padding
-                                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
-                                )
-                            }
+                            DropdownMenuItem(
+                                text = { Text("启动") },
+                                onClick = { menuExpanded = false },
+                                leadingIcon = { Icon(Icons.Outlined.PlayArrow, contentDescription = null) },
+                                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                            )
+                            DropdownMenuItem(
+                                text = { Text("重启") },
+                                onClick = { menuExpanded = false },
+                                leadingIcon = { Icon(Icons.Outlined.Refresh, contentDescription = null) },
+                                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                            )
+                            DropdownMenuItem(
+                                text = { Text("导出") },
+                                onClick = { menuExpanded = false },
+                                leadingIcon = { Icon(Icons.Outlined.Upload, contentDescription = null) },
+                                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                            )
                         }
                     }
                 }
@@ -260,20 +263,6 @@ private fun EnvironmentChip(envType: String) {
 }
 
 @Composable
-private fun HookTopAction(
-    icon: ImageVector,
-    contentDescription: String,
-) {
-    IconButton(onClick = {}) {
-        Icon(
-            imageVector = icon,
-            contentDescription = contentDescription,
-            tint = Color(0xFF303746),
-        )
-    }
-}
-
-@Composable
 private fun HookConfigTabs(
     tabs: List<HookConfigTab>,
     selectedIndex: Int,
@@ -297,11 +286,7 @@ private fun HookConfigTabs(
                     text = tab.title,
                     modifier = Modifier.align(Alignment.Center),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = if (selected) {
-                        HookConfigPrimaryBlue
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    },
+                    color = if (selected) HookConfigPrimaryBlue else MaterialTheme.colorScheme.onSurfaceVariant,
                     fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
                 )
                 Box(

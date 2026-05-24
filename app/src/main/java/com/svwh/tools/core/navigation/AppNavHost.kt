@@ -45,6 +45,7 @@ import androidx.navigation.navArgument
 import com.svwh.tools.core.datastore.UserSettings
 import com.svwh.tools.feature.environment.presentation.EnvironmentRoute
 import com.svwh.tools.feature.hookconfig.presentation.HookConfigRoute
+import com.svwh.tools.feature.hookconfig.presentation.UserHookConfigEditorRoute
 import com.svwh.tools.feature.noenvironment.presentation.NoEnvironmentRoute
 import com.svwh.tools.feature.noenvironment.presentation.repack.RepackAppListRoute
 import com.svwh.tools.feature.settings.presentation.SettingsRoute
@@ -151,6 +152,60 @@ fun AppNavHost(
                 appName = backStackEntry.arguments?.getString("appName")?.let(Uri::decode).orEmpty(),
                 packageName = backStackEntry.arguments?.getString("packageName")?.let(Uri::decode).orEmpty(),
                 envType = backStackEntry.arguments?.getString("envType")?.let(Uri::decode).orEmpty(),
+                onBackClick = navController::popBackStack,
+                onNavigateToUserConfigEditor = { envType, packageName, configId, appName ->
+                    navController.navigate(
+                        AppDestination.userHookConfigEditorRoute(
+                            envType = envType,
+                            packageName = packageName,
+                            configId = configId,
+                            appName = appName,
+                        ),
+                    )
+                },
+            )
+        }
+        composable(
+            route = AppDestination.USER_HOOK_CONFIG_EDITOR_ROUTE,
+            arguments = listOf(
+                navArgument("envType") { type = NavType.StringType },
+                navArgument("packageName") { type = NavType.StringType },
+                navArgument("configId") { type = NavType.LongType },
+                navArgument("appName") {
+                    type = NavType.StringType
+                    defaultValue = ""
+                },
+            ),
+            enterTransition = {
+                slideInHorizontally(
+                    animationSpec = tween(300),
+                    initialOffsetX = { fullWidth -> fullWidth },
+                )
+            },
+            exitTransition = {
+                slideOutHorizontally(
+                    animationSpec = tween(300),
+                    targetOffsetX = { fullWidth -> -fullWidth / 3 },
+                )
+            },
+            popEnterTransition = {
+                slideInHorizontally(
+                    animationSpec = tween(300),
+                    initialOffsetX = { fullWidth -> -fullWidth / 3 },
+                )
+            },
+            popExitTransition = {
+                slideOutHorizontally(
+                    animationSpec = tween(300),
+                    targetOffsetX = { fullWidth -> fullWidth },
+                )
+            },
+        ) { backStackEntry ->
+            UserHookConfigEditorRoute(
+                envType = backStackEntry.arguments?.getString("envType")?.let(Uri::decode).orEmpty(),
+                packageName = backStackEntry.arguments?.getString("packageName")?.let(Uri::decode).orEmpty(),
+                appName = backStackEntry.arguments?.getString("appName")?.let(Uri::decode).orEmpty(),
+                configId = backStackEntry.arguments?.getLong("configId") ?: 0L,
                 onBackClick = navController::popBackStack,
             )
         }

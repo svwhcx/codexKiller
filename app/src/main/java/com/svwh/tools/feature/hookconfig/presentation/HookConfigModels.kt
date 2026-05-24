@@ -8,11 +8,7 @@ import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.Security
 import androidx.compose.material.icons.outlined.TouchApp
 import androidx.compose.material.icons.outlined.Widgets
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import java.text.SimpleDateFormat
-import java.util.Calendar
-import java.util.Locale
 
 internal enum class HookConfigTab(val title: String) {
     Quick("快捷配置"),
@@ -37,23 +33,6 @@ internal data class HookQuickConfigItem(
     val detailHint: String? = null,
     val summaryValues: List<String> = emptyList(),
 )
-
-internal data class HookLogItem(
-    val id: String,
-    val level: HookLogLevel,
-    val title: String,
-    val className: String,
-    val targetLabel: String,
-    val target: String,
-    val timestampMillis: Long,
-)
-
-internal enum class HookLogLevel(val color: Color) {
-    Info(Color(0xFF4D73E6)),
-    Warn(Color(0xFFFF8A2A)),
-    Debug(Color(0xFF37C878)),
-    Error(Color(0xFFE84C55)),
-}
 
 internal fun defaultQuickConfigGroups(): List<HookQuickConfigGroup> {
     return listOf(
@@ -154,50 +133,4 @@ internal fun defaultQuickConfigGroups(): List<HookQuickConfigGroup> {
             ),
         ),
     )
-}
-
-internal fun sampleHookLogs(): List<HookLogItem> {
-    val now = System.currentTimeMillis()
-    val minute = 60_000L
-    val yesterday = now - 24L * 60L * minute
-    val twoDaysAgo = now - 48L * 60L * minute
-    val old = now - 7L * 24L * 60L * minute
-
-    return listOf(
-        HookLogItem("1", HookLogLevel.Info, "控件赋值", "com.apicloud.a.i.a.ag.a", "控件类型：", "com.apicl...", now - minute),
-        HookLogItem("2", HookLogLevel.Info, "控件赋值", "com.apicloud.a.i.a.ag.a", "控件类型：", "com.apicl...", now - 2 * minute),
-        HookLogItem("3", HookLogLevel.Warn, "弹窗显示", "com.updimap.pkg.uczore.f.d", "弹窗内容：", "服务...", now - 12 * minute),
-        HookLogItem("4", HookLogLevel.Info, "控件赋值", "com.apicloud.a.i.a.y.a", "控件类型：", "com.apicl...", now - 25 * minute),
-        HookLogItem("5", HookLogLevel.Debug, "文件打开监听", "com.uzmap.pkg.io.FileBridge", "路径：", "/sdcard/...", now - 36 * minute),
-        HookLogItem("6", HookLogLevel.Error, "控件赋值", "android.widget.TextView", "控件类型：", "android...", now - 47 * minute),
-        HookLogItem("7", HookLogLevel.Info, "onClick 监听", "com.apicloud.a.i.a.ag.a", "方法：", "onClick(View)", yesterday - 22 * minute),
-        HookLogItem("8", HookLogLevel.Debug, "弹窗显示", "com.uzmap.pkg.uczore.f.d", "弹窗内容：", "权限申...", twoDaysAgo - 8 * minute),
-        HookLogItem("9", HookLogLevel.Warn, "网络请求监听", "okhttp3.RealCall", "URL：", "https://...", old),
-    )
-}
-
-internal fun formatHookLogTime(timestampMillis: Long): String {
-    val now = Calendar.getInstance()
-    val target = Calendar.getInstance().apply {
-        timeInMillis = timestampMillis
-    }
-    val timeFormat = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
-
-    return when {
-        isSameDay(now, target) -> timeFormat.format(target.time)
-        isDaysBefore(now, target, 1) -> "昨天 ${timeFormat.format(target.time)}"
-        isDaysBefore(now, target, 2) -> "前天 ${timeFormat.format(target.time)}"
-        else -> SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(target.time)
-    }
-}
-
-private fun isSameDay(first: Calendar, second: Calendar): Boolean {
-    return first.get(Calendar.YEAR) == second.get(Calendar.YEAR) &&
-        first.get(Calendar.DAY_OF_YEAR) == second.get(Calendar.DAY_OF_YEAR)
-}
-
-private fun isDaysBefore(now: Calendar, target: Calendar, days: Int): Boolean {
-    val expected = now.clone() as Calendar
-    expected.add(Calendar.DAY_OF_YEAR, -days)
-    return isSameDay(expected, target)
 }
