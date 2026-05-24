@@ -52,6 +52,8 @@ class RepackProgressSimulator @Inject constructor(
         )
     }
 
+    override fun stop() = Unit
+
     private suspend fun runStep(stepId: String, label: String, durationMs: Long) {
         progressController.appendStep(
             AppendRepackStepCommand(

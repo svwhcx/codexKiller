@@ -6,4 +6,5 @@ package com.svwh.tools.feature.noenvironment.domain.model
 data class UpdateRepackStepCommand(
     val stepId: String,
     val status: RepackStepStatus,
+    val outputApkPath: String? = null,
 )

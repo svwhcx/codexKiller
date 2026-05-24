@@ -81,6 +81,7 @@ class RepackProgressControllerImpl @Inject constructor() : RepackProgressControl
             current.copy(
                 steps = updatedSteps,
                 sessionFinished = sessionFinished,
+                outputApkPath = command.outputApkPath ?: current.outputApkPath,
             )
         }
     }

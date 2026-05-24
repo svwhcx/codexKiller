@@ -6,19 +6,19 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Folder
-import androidx.compose.material.icons.outlined.Security
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -30,6 +30,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 
@@ -37,7 +38,6 @@ import androidx.compose.ui.window.DialogProperties
 fun PermissionRequestDialog(
     title: String,
     message: String,
-    safetyNote: String,
     icon: ImageVector,
     confirmText: String,
     dismissText: String,
@@ -50,27 +50,23 @@ fun PermissionRequestDialog(
     ) {
         Surface(
             modifier = Modifier
-                .fillMaxWidth(0.64f)
-                .widthIn(max = 272.dp),
-            shape = RoundedCornerShape(22.dp),
-            color = MaterialTheme.colorScheme.surface,
-            tonalElevation = 8.dp,
+                .fillMaxWidth(0.78f)
+                .widthIn(max = 320.dp),
+            shape = RoundedCornerShape(20.dp),
+            color = Color.White,
+            tonalElevation = 0.dp,
             shadowElevation = 12.dp,
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 24.dp, vertical = 22.dp),
+                    .padding(horizontal = 20.dp, vertical = 22.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {
                 Box(
                     modifier = Modifier
                         .size(52.dp)
-                        .background(
-                            color = Color(0xFFEAF2FF),
-                            shape = RoundedCornerShape(26.dp),
-                        ),
+                        .background(color = Color(0xFFEDF1F7), shape = CircleShape),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
@@ -81,47 +77,25 @@ fun PermissionRequestDialog(
                     )
                 }
 
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
-                    Text(
-                        text = message,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center,
-                    )
-                }
+                Spacer(modifier = Modifier.height(14.dp))
 
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(
-                            color = Color(0xFFF5F8FC),
-                            shape = RoundedCornerShape(8.dp),
-                        )
-                        .padding(horizontal = 12.dp, vertical = 9.dp),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    verticalAlignment = Alignment.Top,
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Security,
-                        contentDescription = null,
-                        tint = Color(0xFF2D6CCB),
-                        modifier = Modifier.size(18.dp),
-                    )
-                    Text(
-                        text = safetyNote,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+                Text(
+                    text = title,
+                    color = Color(0xFF1F2330),
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = message,
+                    color = Color(0xFF8A93A4),
+                    fontSize = 12.sp,
+                    textAlign = TextAlign.Center,
+                )
+
+                Spacer(modifier = Modifier.height(20.dp))
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -130,29 +104,29 @@ fun PermissionRequestDialog(
                     OutlinedButton(
                         modifier = Modifier
                             .weight(1f)
-                            .height(36.dp),
+                            .height(40.dp),
                         onClick = onDismiss,
-                        shape = RoundedCornerShape(6.dp),
+                        shape = RoundedCornerShape(8.dp),
                         border = BorderStroke(1.dp, Color(0xFFE0E5EE)),
                         colors = ButtonDefaults.outlinedButtonColors(
                             containerColor = Color.White,
-                            contentColor = MaterialTheme.colorScheme.onSurface,
+                            contentColor = Color(0xFF1F2330),
                         ),
                     ) {
-                        Text(text = dismissText)
+                        Text(text = dismissText, fontSize = 14.sp)
                     }
                     Button(
                         modifier = Modifier
                             .weight(1f)
-                            .height(36.dp),
+                            .height(40.dp),
                         onClick = onConfirm,
-                        shape = RoundedCornerShape(6.dp),
+                        shape = RoundedCornerShape(8.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = Color(0xFF2D6CCB),
                             contentColor = Color.White,
                         ),
                     ) {
-                        Text(text = confirmText)
+                        Text(text = confirmText, fontSize = 14.sp)
                     }
                 }
             }
@@ -167,8 +141,7 @@ fun FileAccessPermissionDialog(
 ) {
     PermissionRequestDialog(
         title = "需要文件访问权限",
-        message = "Hook 开关需要保存状态，请授予所有文件权限",
-        safetyNote = "我们仅会在上述目录下读写必要的配置文件，不会访问或保存您的个人文件。",
+        message = "Hook 开关需要保存状态，请授予所有文件权限。",
         icon = Icons.Outlined.Folder,
         confirmText = "去授权",
         dismissText = "取消",

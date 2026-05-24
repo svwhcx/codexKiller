@@ -108,7 +108,10 @@ private fun EnvironmentScreen(
     Column(
         modifier = Modifier.fillMaxSize()
     ) {
-        LsposedStatusCard(enabled = uiState.lsposedEnabled)
+        LsposedStatusCard(
+            enabled = uiState.lsposedEnabled,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+        )
 
         Spacer(modifier = Modifier.height(12.dp)) // Add some space between banner and card
 
@@ -190,7 +193,10 @@ private fun EnvironmentAppListCard(
 }
 
 @Composable
-private fun LsposedStatusCard(enabled: Boolean) {
+private fun LsposedStatusCard(
+    enabled: Boolean,
+    modifier: Modifier = Modifier,
+) {
     val contentColor = if (enabled) SuccessGreen else WarningRed
     val message = if (enabled) {
         "当前已检测到 LSPosed 激活状态，可以执行 Hook 分析。"
@@ -205,7 +211,7 @@ private fun LsposedStatusCard(enabled: Boolean) {
     }
 
     Surface(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(10.dp),
         color = Color.Transparent,
         shadowElevation = 0.dp,

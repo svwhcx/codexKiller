@@ -1,6 +1,7 @@
 package com.svwh.tools.feature.hookconfig.presentation
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -37,9 +38,13 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Code
+import androidx.compose.material.icons.outlined.DeleteOutline
+import androidx.compose.material.icons.outlined.DoneAll
 import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material.icons.outlined.FileDownload
+import androidx.compose.material.icons.outlined.SelectAll
 import androidx.compose.material.icons.outlined.Title
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -119,23 +124,23 @@ private val FridaCodeSuggestionBg = Color(0xFF2B3445)
 private val FridaCodeScrollbarTrack = Color(0x334B5563)
 private val FridaCodeScrollbarThumb = Color(0xB4CBD5E1)
 
-private const val TEXT_EMPTY_FRIDA = "\u6682\u65e0 Frida \u811a\u672c"
-private const val TEXT_LOADING = "\u52a0\u8f7d\u4e2d..."
-private const val TEXT_ADD_FRIDA = "\u6dfb\u52a0\u811a\u672c"
-private const val TEXT_IMPORT_FRIDA = "\u5bfc\u5165\u811a\u672c"
-private const val TEXT_IMPORT_TITLE = "\u4ece\u5168\u5c40\u811a\u672c\u5e93\u5bfc\u5165"
-private const val TEXT_IMPORT_EMPTY = "\u6682\u65e0\u5168\u5c40 Frida \u811a\u672c"
-private const val TEXT_SELECT_ALL = "\u5168\u9009"
-private const val TEXT_REVERSE_SELECT = "\u53cd\u9009"
-private const val TEXT_DELETE = "\u5220\u9664"
-private const val TEXT_CANCEL = "\u53d6\u6d88"
-private const val TEXT_BACK = "\u8fd4\u56de"
-private const val TEXT_SAVE = "\u4fdd\u5b58"
-private const val TEXT_SAVING = "\u4fdd\u5b58\u4e2d..."
-private const val TEXT_SCRIPT_NAME_PLACEHOLDER = "\u8bf7\u8f93\u5165\u811a\u672c\u540d\u79f0"
-private const val TEXT_SCRIPT_EMPTY_PREVIEW = "\u672a\u586b\u5199\u811a\u672c\u5185\u5bb9"
-private const val TEXT_SCRIPT_CONTENT_LABEL = "\u811a\u672c\u5185\u5bb9"
-private const val TEXT_FORMAT = "\u683c\u5f0f\u5316"
+private const val TEXT_EMPTY_FRIDA = "暂无 Frida 脚本"
+private const val TEXT_LOADING = "加载中..."
+private const val TEXT_ADD_FRIDA = "添加脚本"
+private const val TEXT_IMPORT_FRIDA = "导入脚本"
+private const val TEXT_IMPORT_TITLE = "从全局脚本库导入"
+private const val TEXT_IMPORT_EMPTY = "暂无全局 Frida 脚本"
+private const val TEXT_SELECT_ALL = "全选"
+private const val TEXT_REVERSE_SELECT = "反选"
+private const val TEXT_DELETE = "删除"
+private const val TEXT_CANCEL = "取消"
+private const val TEXT_BACK = "返回"
+private const val TEXT_SAVE = "保存"
+private const val TEXT_SAVING = "保存中..."
+private const val TEXT_SCRIPT_NAME_PLACEHOLDER = "请输入脚本名称"
+private const val TEXT_SCRIPT_EMPTY_PREVIEW = "未填写脚本内容"
+private const val TEXT_SCRIPT_CONTENT_LABEL = "脚本内容"
+private const val TEXT_FORMAT = "格式化"
 private val FridaSwitchWidth = 46.dp
 private val FridaSwitchHeight = 27.dp
 private val FridaSwitchThumbSize = 23.dp
@@ -307,15 +312,32 @@ internal fun FridaScriptPage(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    FridaSelectionActionButton(TEXT_SELECT_ALL, viewModel::selectAll, Modifier.weight(1f))
-                    FridaSelectionActionButton(TEXT_REVERSE_SELECT, viewModel::reverseSelection, Modifier.weight(1f))
+                    FridaSelectionActionButton(
+                        text = TEXT_SELECT_ALL,
+                        icon = Icons.Outlined.SelectAll,
+                        onClick = viewModel::selectAll,
+                        modifier = Modifier.weight(1f),
+                    )
+                    FridaSelectionActionButton(
+                        text = TEXT_REVERSE_SELECT,
+                        icon = Icons.Outlined.DoneAll,
+                        onClick = viewModel::reverseSelection,
+                        modifier = Modifier.weight(1f),
+                    )
                     FridaSelectionActionButton(
                         text = TEXT_DELETE,
+                        icon = Icons.Outlined.DeleteOutline,
                         onClick = viewModel::deleteSelected,
                         modifier = Modifier.weight(1f),
                         contentColor = FridaErrorText,
                     )
-                    FridaSelectionActionButton(TEXT_CANCEL, viewModel::cancelSelection, Modifier.weight(1f))
+                    FridaSelectionActionButton(
+                        text = TEXT_CANCEL,
+                        icon = Icons.Outlined.Close,
+                        onClick = viewModel::cancelSelection,
+                        modifier = Modifier.weight(1f),
+                        filled = true,
+                    )
                 }
             } else {
                 Row(
@@ -497,27 +519,48 @@ private fun EmptyFridaState(
 @Composable
 private fun FridaSelectionActionButton(
     text: String,
+    icon: ImageVector,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     contentColor: Color = HookConfigPrimaryBlue,
+    filled: Boolean = false,
 ) {
-    TextButton(
-        onClick = onClick,
-        modifier = modifier.requiredHeight(38.dp),
-        shape = RoundedCornerShape(8.dp),
-        colors = ButtonDefaults.textButtonColors(
-            containerColor = Color(0xFFF7F9FF),
-            contentColor = contentColor,
-        ),
-        contentPadding = PaddingValues(horizontal = 4.dp),
+    val shape = RoundedCornerShape(6.dp)
+    val containerColor = if (filled) HookConfigPrimaryBlue else Color.White
+    val foregroundColor = if (filled) Color.White else contentColor
+    Surface(
+        modifier = modifier
+            .requiredHeight(38.dp)
+            .clip(shape)
+            .clickable(onClick = onClick),
+        shape = shape,
+        color = containerColor,
+        border = if (filled) null else BorderStroke(1.dp, Color(0xFFE8EEF8)),
+        shadowElevation = if (filled) 1.dp else 0.dp,
     ) {
-        Text(
-            text = text,
-            fontSize = 13.sp,
-            fontWeight = FontWeight.Medium,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 5.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = text,
+                modifier = Modifier.size(14.dp),
+                tint = foregroundColor,
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(
+                text = text,
+                color = foregroundColor,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
     }
 }
 

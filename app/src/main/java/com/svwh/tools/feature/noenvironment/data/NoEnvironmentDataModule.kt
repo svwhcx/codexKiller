@@ -1,7 +1,7 @@
 package com.svwh.tools.feature.noenvironment.data
 
 import com.svwh.tools.feature.noenvironment.data.repack.RepackProgressControllerImpl
-import com.svwh.tools.feature.noenvironment.data.repack.RepackProgressSimulator
+import com.svwh.tools.feature.noenvironment.data.repack.WorkManagerRepackWorkflowRunner
 import com.svwh.tools.feature.noenvironment.domain.repack.RepackProgressController
 import com.svwh.tools.feature.noenvironment.domain.repack.RepackWorkflowRunner
 import dagger.Binds
@@ -19,6 +19,6 @@ abstract class NoEnvironmentDataModule {
 
     @Binds
     abstract fun bindRepackWorkflowRunner(
-        simulator: RepackProgressSimulator,
+        runner: WorkManagerRepackWorkflowRunner,
     ): RepackWorkflowRunner
 }

@@ -88,7 +88,7 @@ class RoomFridaScriptRepository @Inject constructor(
     private suspend fun validateDraft(draft: FridaScriptDraft) {
         require(draft.packageName.isNotBlank()) { "packageName cannot be blank" }
         require(draft.envType.isNotBlank()) { "envType cannot be blank" }
-        require(draft.name.isNotBlank()) { "\u811a\u672c\u540d\u79f0\u4e0d\u80fd\u4e3a\u7a7a" }
+        require(draft.name.isNotBlank()) { "脚本名称不能为空" }
 
         val duplicateNameCount = fridaScriptDao.countScriptName(
             packageName = draft.packageName,
@@ -96,7 +96,7 @@ class RoomFridaScriptRepository @Inject constructor(
             name = draft.name.trim(),
             excludeId = draft.id,
         )
-        require(duplicateNameCount == 0) { "\u811a\u672c\u540d\u79f0\u5df2\u5b58\u5728" }
+        require(duplicateNameCount == 0) { "脚本名称已存在" }
     }
 
     private fun FridaScriptEntity.toItem(): FridaScriptItem {

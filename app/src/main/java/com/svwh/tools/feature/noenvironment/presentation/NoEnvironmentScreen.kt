@@ -78,7 +78,9 @@ private fun NoEnvironmentScreen(
     Column(
         modifier = Modifier.fillMaxSize()
     ) {
-        NoEnvironmentInfoBanner()
+        NoEnvironmentInfoBanner(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+        )
 
         Spacer(modifier = Modifier.height(12.dp)) // Add some space between banner and card
 
@@ -94,12 +96,13 @@ private fun NoEnvironmentScreen(
 }
 
 @Composable
-private fun NoEnvironmentInfoBanner() {
+private fun NoEnvironmentInfoBanner(modifier: Modifier = Modifier) {
     StaticInfoBanner(
         message = "无环境可重打包 App 后执行有环境相似功能。",
         contentColor = NoEnvironmentGreen,
         startColor = NoEnvironmentContainerStart,
         endColor = NoEnvironmentContainerEnd,
+        modifier = modifier,
     )
 }
 

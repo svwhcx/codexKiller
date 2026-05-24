@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>使用帮助</title>
+    <style>
+        /* 全局样式 */
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            background-color: #c3ceda;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #c3ceda;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            text-align: center;
+            color: #4CAF50;
+            margin-bottom: 20px;
+        }
+
+        p {
+            margin-bottom: 15px;
+        }
+
+        .section-title {
+            font-size: 1.5em;
+            color: #4CAF50;
+            border-left: 4px solid #4CAF50;
+            padding-left: 10px;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+
+        .image-container {
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .image-container img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 5px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .step {
+            font-size: 1.1em;
+            margin: 15px 0;
+            padding-left: 15px;
+            border-left: 4px solid #ddd;
+        }
+
+        .footer {
+            text-align: center;
+            font-size: 0.9em;
+            color: #777;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>使用帮助</h1>
+
+    <div class="section-title">1. 本软件的作用</div>
+    <p>本软件主要用于dex中的方法的String类型的参数替换，待替换的参数需要根据规则匹配，而不是全部替换操作。
+        主要是方便修改，避免手动插入smali指令。
+        同时提供方法的参数的日志记录功能，方便查看运行情况（无需Root）
+        支持 native 类型的方法修改和记录参数的功能。
+        其中关于iApp修改方法见：<a href="https://bbs.binmt.cc/thread-138043-1-1.html">【iApp通用】iApp软件非服务端验证功能过VIP通用教程</a>
+    </p>
+    <div class="section-title">2. 软件需要的权限</div>
+    <ol>
+        <li>文件存储权限：用于读取和写出dex文件。</li>
+        <li>网络权限：用于检测和更新App版本，反馈Bug和建议。</li>
+    </ol>
+    <div class="section-title">3. 首页介绍</div>
+    <p>为了方便，首页采用悬浮按钮的方式，按钮的对应功能介绍如下：</p>
+    <ol>
+        <li>选择apk文件导入</li>
+        <li>新建一个方法参数替换的规则</li>
+        <li>执行写出操作，首次使用需要申请存储权限</li>
+        <li>
+            用于复制的apk的完整路径粘贴，不用手动选择文件，但要确保文件路径正确可访问!(特别是敏感的数据目录)
+        </li>
+    </ol>
+    <div class="image-container">
+
+        <img src="file:///android_asset/images/help/home.png" alt="主页面截图">
+    </div>
+
+    <div class="section-title">2. 添加规则功能介绍</div>
+    <p>
+    <ol>
+        <li>
+            <span style="color:red">配置是记录该方法的所有参数的日志，还是直接执行修改操作
+            若是记录的日志操作，那么软件运行时，将会把执行方法的每个参数记录到文件中，记录位置在
+                Android/data/修改软件的包名/files/Killer/目录下。</span>
+        </li>
+
+        <li>
+            方法签名：输入要修改的方法的签名，例如：Lcom/example/test/MainActivity;->onCreate(Landroid/os/Bundle;)V，
+            预先提供了六个方法签名，以便修改，可以从mt复制，不会出错。
+        </li>
+        <li>
+            方法参数：输入需要修改的参数是该方法的第几个参数，<span style="color:red">目前只支持String类型的修改!</span>
+        </li>
+        <li>
+            匹配值: 输入框输入待修改字符串的匹配规则，例如iApp的判断语句f(sss.vip==true)，那么这里就直接输入sss.vip==true即可
+        </li>
+        <li>
+            替换值: 输入要修改的替换值，将匹配值匹配的部分替换为想要的值。例如将判断规则改为true，就是将f(sss.vip==true)替换为true了
+        </li>
+    </ol>
+    </p>
+    <div class="image-container">
+        <img src="file:///android_asset/images/help/add_config.png" alt="添加规则截图">
+    </div>
+    <div class="section-title">4. 修改步骤</div>
+    <p class="step">步骤1：导入apk文件</p>
+    <p class="step">步骤2：点击“+”添加修改规则</p>
+    <p class="step">步骤3：点击执行按钮输出apk文件</p>
+
+    <div class="section-title" style="color:red">5. 常见问题</div>
+    <p class="step">1：apk文件写出位置</p>
+    <p>dex文件的写出位置和导入的apk文件位置一致，后缀为killer_sign.apk</p>
+    <p class="step">2：修改的apk记录的参数日志文件位置</p>
+    <p>记录的参数日志文件位置在Android/data/修改软件的包名/files/Killer/目录下或者是iAppKiller目录</p>
+    <p class="step">3: 一个apk执行了两次修改出现闪退情况，可能是缓存bug，建议重启Killer执行修改操作。</p>
+    <p>这个bug由于优化dex速度导致，后续版本会修复</p>
+    <p>如果您在使用中遇到问题，请联系作者反馈</p>
+
+    <div class="footer">
+        <p>感谢您对本应用的支持！</p>
+    </div>
+</div>
+</body>
+</html>

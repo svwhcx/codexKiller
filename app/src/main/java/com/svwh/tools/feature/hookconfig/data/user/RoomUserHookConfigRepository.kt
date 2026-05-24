@@ -18,6 +18,7 @@ import kotlinx.coroutines.withContext
 @Singleton
 class RoomUserHookConfigRepository @Inject constructor(
     private val userHookConfigDao: UserHookConfigDao,
+    private val noEnvHookConfigExporter: NoEnvHookConfigExporter,
 ) : UserHookConfigRepository {
 
     override suspend fun getConfigs(
@@ -97,6 +98,10 @@ class RoomUserHookConfigRepository @Inject constructor(
             if (rules.isNotEmpty()) {
                 userHookConfigDao.insertRules(rules)
             }
+            noEnvHookConfigExporter.syncPackage(
+                envType = draft.envType,
+                packageName = draft.packageName,
+            )
             AppResult.Success(savedId)
         }.getOrElse { AppResult.Failure(AppError.Unknown(it)) }
     }
@@ -111,6 +116,12 @@ class RoomUserHookConfigRepository @Inject constructor(
                 enabled = enabled,
                 updatedAtMillis = System.currentTimeMillis(),
             )
+            userHookConfigDao.getConfigWithRulesById(id)?.config?.let { config ->
+                noEnvHookConfigExporter.syncPackage(
+                    envType = config.envType,
+                    packageName = config.packageName,
+                )
+            }
             AppResult.Success(Unit)
         }.getOrElse { AppResult.Failure(AppError.Unknown(it)) }
     }
@@ -118,8 +129,17 @@ class RoomUserHookConfigRepository @Inject constructor(
     override suspend fun deleteConfigs(ids: List<Long>): AppResult<Unit> = withContext(Dispatchers.IO) {
         runCatching {
             if (ids.isNotEmpty()) {
+                val affectedPackages = userHookConfigDao.getConfigsWithRulesByIds(ids)
+                    .map { relation -> relation.config.envType to relation.config.packageName }
+                    .distinct()
                 userHookConfigDao.deleteRulesByHookConfigIds(ids)
                 userHookConfigDao.deleteConfigsByIds(ids)
+                affectedPackages.forEach { (envType, packageName) ->
+                    noEnvHookConfigExporter.syncPackage(
+                        envType = envType,
+                        packageName = packageName,
+                    )
+                }
             }
             AppResult.Success(Unit)
         }.getOrElse { AppResult.Failure(AppError.Unknown(it)) }

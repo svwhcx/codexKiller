@@ -47,6 +47,15 @@ interface UserHookConfigDao {
     )
     suspend fun getConfigWithRulesById(id: Long): UserHookConfigWithRules?
 
+    @Transaction
+    @Query(
+        """
+        SELECT * FROM user_hook_configs
+        WHERE id IN (:ids)
+        """,
+    )
+    suspend fun getConfigsWithRulesByIds(ids: List<Long>): List<UserHookConfigWithRules>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertConfig(entity: UserHookConfigEntity): Long
 

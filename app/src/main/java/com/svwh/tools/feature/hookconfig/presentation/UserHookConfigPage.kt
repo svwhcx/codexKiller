@@ -1,6 +1,7 @@
 package com.svwh.tools.feature.hookconfig.presentation
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -32,8 +33,12 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.Build
+import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.DeleteOutline
+import androidx.compose.material.icons.outlined.DoneAll
 import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material.icons.outlined.PersonOutline
+import androidx.compose.material.icons.outlined.SelectAll
 import androidx.compose.material.icons.outlined.Widgets
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -98,35 +103,35 @@ private val UserConfigBottomBg = Color(0xFBFFFFFF)
 private val UserConfigErrorBg = Color(0xFFFFF0F1)
 private val UserConfigErrorText = Color(0xFFC62828)
 
-private const val TEXT_EMPTY = "\u6682\u65e0\u914d\u7f6e"
-private const val TEXT_SELECT_ALL = "\u5168\u9009"
-private const val TEXT_REVERSE_SELECT = "\u53cd\u9009"
-private const val TEXT_DELETE = "\u5220\u9664"
-private const val TEXT_CANCEL = "\u53d6\u6d88"
-private const val TEXT_ADD_CONFIG = "\u6dfb\u52a0\u914d\u7f6e"
-private const val TEXT_BACK = "\u8fd4\u56de"
-private const val TEXT_SAVING = "\u4fdd\u5b58\u4e2d..."
-private const val TEXT_SAVE = "\u4fdd\u5b58"
-private const val TEXT_CONFIG_NAME_PLACEHOLDER = "\u8bf7\u8f93\u5165\u914d\u7f6e\u540d\u79f0"
-private const val TEXT_CLASS_NAME_PLACEHOLDER = "\u8bf7\u8f93\u5165\u7c7b\u540d"
-private const val TEXT_METHOD_NAME_PLACEHOLDER = "\u8bf7\u8f93\u5165\u65b9\u6cd5\u540d"
-private const val TEXT_PARAMS_PLACEHOLDER = "\u8bf7\u8f93\u5165\u53c2\u6570\u5217\u8868\uff0c\u7528\u82f1\u6587\u9017\u53f7\u5206\u9694"
-private const val TEXT_LOG = "\u662f\u5426\u8bb0\u5f55\u65e5\u5fd7"
-private const val TEXT_INTERRUPT = "\u662f\u5426\u62e6\u622a"
-private const val TEXT_ADD = "\u6dfb\u52a0"
-private const val TEXT_RETURN_VALUE = "\u8fd4\u56de\u503c"
-private const val TEXT_RULE_DIALOG_TITLE = "\u4fee\u6539\u53c2\u6570\u6216\u8fd4\u56de\u503c"
-private const val TEXT_MATCH_VALUE_PLACEHOLDER = "\u8bf7\u8f93\u5165\u5339\u914d\u503c"
-private const val TEXT_REPLACE_VALUE_PREFIX = "\u8bf7\u8f93\u5165\u66ff\u6362\u503c\uff0c\u53c2\u6570\u53c2\u8003\uff1a"
-private const val TEXT_NO_PARAMS = "\u65e0\u53c2\u6570"
-private const val TEXT_REPLACE_VALUE_PLACEHOLDER = "\u8bf7\u8f93\u5165\u66ff\u6362\u503c"
-private const val TEXT_EDIT_VALUE = "\u4fee\u6539\u503c"
-private const val TEXT_MATCH_VALUE = "\u5339\u914d\u503c"
-private const val TEXT_MATCH_ALL = "\u5168\u90e8\u66ff\u6362"
-private const val TEXT_EQUALS = "\u76f8\u7b49"
-private const val TEXT_CONTAINS = "\u5305\u542b"
-private const val TEXT_STARTS_WITH = "\u5f00\u59cb"
-private const val TEXT_ENDS_WITH = "\u7ed3\u5c3e"
+private const val TEXT_EMPTY = "暂无配置"
+private const val TEXT_SELECT_ALL = "全选"
+private const val TEXT_REVERSE_SELECT = "反选"
+private const val TEXT_DELETE = "删除"
+private const val TEXT_CANCEL = "取消"
+private const val TEXT_ADD_CONFIG = "添加配置"
+private const val TEXT_BACK = "返回"
+private const val TEXT_SAVING = "保存中..."
+private const val TEXT_SAVE = "保存"
+private const val TEXT_CONFIG_NAME_PLACEHOLDER = "请输入配置名称"
+private const val TEXT_CLASS_NAME_PLACEHOLDER = "请输入类名"
+private const val TEXT_METHOD_NAME_PLACEHOLDER = "请输入方法名"
+private const val TEXT_PARAMS_PLACEHOLDER = "请输入参数列表，用英文逗号分隔"
+private const val TEXT_LOG = "是否记录日志"
+private const val TEXT_INTERRUPT = "是否拦截"
+private const val TEXT_ADD = "添加"
+private const val TEXT_RETURN_VALUE = "返回值"
+private const val TEXT_RULE_DIALOG_TITLE = "修改参数或返回值"
+private const val TEXT_MATCH_VALUE_PLACEHOLDER = "请输入匹配值"
+private const val TEXT_REPLACE_VALUE_PREFIX = "请输入替换值，参数参考："
+private const val TEXT_NO_PARAMS = "无参数"
+private const val TEXT_REPLACE_VALUE_PLACEHOLDER = "请输入替换值"
+private const val TEXT_EDIT_VALUE = "修改值"
+private const val TEXT_MATCH_VALUE = "匹配值"
+private const val TEXT_MATCH_ALL = "全部替换"
+private const val TEXT_EQUALS = "相等"
+private const val TEXT_CONTAINS = "包含"
+private const val TEXT_STARTS_WITH = "开始"
+private const val TEXT_ENDS_WITH = "结尾"
 private val RuleValueFieldHeight = 40.dp
 private val RuleHeaderActionHeight = 34.dp
 private val UserConfigSwitchWidth = 46.dp
@@ -239,24 +244,29 @@ internal fun UserHookConfigPage(
                 ) {
                     SelectionActionButton(
                         text = TEXT_SELECT_ALL,
+                        icon = Icons.Outlined.SelectAll,
                         onClick = viewModel::selectAll,
                         modifier = Modifier.weight(1f),
                     )
                     SelectionActionButton(
                         text = TEXT_REVERSE_SELECT,
+                        icon = Icons.Outlined.DoneAll,
                         onClick = viewModel::reverseSelection,
                         modifier = Modifier.weight(1f),
                     )
                     SelectionActionButton(
                         text = TEXT_DELETE,
+                        icon = Icons.Outlined.DeleteOutline,
                         onClick = viewModel::deleteSelected,
                         modifier = Modifier.weight(1f),
                         contentColor = UserConfigDeleteRed,
                     )
                     SelectionActionButton(
                         text = TEXT_CANCEL,
+                        icon = Icons.Outlined.Close,
                         onClick = viewModel::cancelSelection,
                         modifier = Modifier.weight(1f),
+                        filled = true,
                     )
                 }
             } else {
@@ -445,27 +455,48 @@ private fun EmptyUserConfigState(
 @Composable
 private fun SelectionActionButton(
     text: String,
+    icon: ImageVector,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     contentColor: Color = HookConfigPrimaryBlue,
+    filled: Boolean = false,
 ) {
-    TextButton(
-        onClick = onClick,
-        modifier = modifier.requiredHeight(38.dp),
-        shape = RoundedCornerShape(8.dp),
-        colors = ButtonDefaults.textButtonColors(
-            containerColor = Color(0xFFF7F9FF),
-            contentColor = contentColor,
-        ),
-        contentPadding = PaddingValues(horizontal = 4.dp),
+    val shape = RoundedCornerShape(6.dp)
+    val containerColor = if (filled) HookConfigPrimaryBlue else Color.White
+    val foregroundColor = if (filled) Color.White else contentColor
+    Surface(
+        modifier = modifier
+            .requiredHeight(38.dp)
+            .clip(shape)
+            .clickable(onClick = onClick),
+        shape = shape,
+        color = containerColor,
+        border = if (filled) null else BorderStroke(1.dp, Color(0xFFE8EEF8)),
+        shadowElevation = if (filled) 1.dp else 0.dp,
     ) {
-        Text(
-            text = text,
-            fontSize = 13.sp,
-            fontWeight = FontWeight.Medium,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 5.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = text,
+                modifier = Modifier.size(14.dp),
+                tint = foregroundColor,
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(
+                text = text,
+                color = foregroundColor,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
     }
 }
 
@@ -667,7 +698,7 @@ private fun FullScreenUserConfigEditor(
                 }
                 itemsIndexed(draft.rules) { index, rule ->
                     ChangeRuleItem(
-                        title = if (rule.paramNumber < 1) TEXT_RETURN_VALUE else "\u53c2\u6570${rule.paramNumber}",
+                        title = if (rule.paramNumber < 1) TEXT_RETURN_VALUE else "参数${rule.paramNumber}",
                         rule = rule,
                         onDelete = { onRemoveRule(index) },
                         onRuleChange = { transform -> onUpdateRule(index, transform) },
@@ -799,7 +830,7 @@ private fun AddRuleOverlay(
                 .map { it.trim() }
                 .filter { it.isNotBlank() }
                 .forEachIndexed { index, _ ->
-                    add(ParamOption("\u53c2\u6570${index + 1}", index + 1))
+                    add(ParamOption("参数${index + 1}", index + 1))
                 }
         }
     }
@@ -1208,6 +1239,6 @@ private fun getMatchTypeLabel(matchType: String): String {
         "equals" -> TEXT_EQUALS
         "startsWith" -> TEXT_STARTS_WITH
         "endsWith" -> TEXT_ENDS_WITH
-        else -> "\u5168\u90e8"
+        else -> "全部"
     }
 }

@@ -15,10 +15,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-private const val ERROR_SCRIPT_NAME_REQUIRED = "\u811a\u672c\u540d\u79f0\u4e0d\u80fd\u4e3a\u7a7a"
-private const val ERROR_SCRIPT_NAME_DUPLICATE = "\u811a\u672c\u540d\u79f0\u5df2\u5b58\u5728"
-private const val ERROR_UPDATE_SCRIPT_SWITCH = "\u66f4\u65b0\u811a\u672c\u5f00\u5173\u5931\u8d25"
-private const val ERROR_DELETE_SCRIPT = "\u5220\u9664\u811a\u672c\u5931\u8d25"
+private const val ERROR_SCRIPT_NAME_REQUIRED = "脚本名称不能为空"
+private const val ERROR_SCRIPT_NAME_DUPLICATE = "脚本名称已存在"
+private const val ERROR_UPDATE_SCRIPT_SWITCH = "更新脚本开关失败"
+private const val ERROR_DELETE_SCRIPT = "删除脚本失败"
 
 internal data class FridaScriptUiState(
     val envType: String = "",
@@ -230,7 +230,7 @@ internal class FridaScriptViewModel @Inject constructor(
         val next = _uiState.value.items.map { it.id }.filterNot { it in current }.toSet()
         _uiState.value = _uiState.value.copy(
             selectedIds = next,
-            isSelectionMode = next.isNotEmpty(),
+            isSelectionMode = _uiState.value.items.isNotEmpty(),
         )
     }
 
@@ -318,9 +318,9 @@ internal class FridaScriptViewModel @Inject constructor(
         return when (this) {
             is AppError.Unknown -> throwable.message ?: throwable.localizedMessage ?: throwable.toString()
             is AppError.Http -> message ?: "HTTP $code"
-            AppError.NetworkUnavailable -> "\u7f51\u7edc\u4e0d\u53ef\u7528"
-            AppError.Timeout -> "\u8bf7\u6c42\u8d85\u65f6"
-            is AppError.Serialization -> message ?: "\u6570\u636e\u89e3\u6790\u5931\u8d25"
+            AppError.NetworkUnavailable -> "网络不可用"
+            AppError.Timeout -> "请求超时"
+            is AppError.Serialization -> message ?: "数据解析失败"
         }
     }
 }

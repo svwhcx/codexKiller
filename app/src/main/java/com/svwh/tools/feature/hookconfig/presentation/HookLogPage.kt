@@ -1,6 +1,7 @@
 package com.svwh.tools.feature.hookconfig.presentation
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -21,14 +23,19 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.FilterList
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Tune
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -63,6 +70,10 @@ private val LogSearchActionBackground = Color(0xFFF0F4FB)
 private val LogTextPrimary = Color(0xFF2F3747)
 private val LogTextSecondary = Color(0xFF6C768A)
 private val LogControlCornerRadius = 10.dp
+private val LogSheetScrim = Color(0x66000000)
+private val LogSheetBorder = Color(0xFFE8EDF5)
+private val LogSheetButtonBg = Color(0xFFF6F8FC)
+private val LogSheetIconBg = Color(0xFFF8FAFF)
 
 @Composable
 internal fun HookLogPage(
@@ -120,7 +131,7 @@ internal fun HookLogPage(
     }
 
     if (showTypeFilterDialog) {
-        HookLogTypeFilterDialog(
+        HookLogTypeFilterBottomSheet(
             options = uiState.availableTypes,
             selectedTypes = uiState.selectedTypes,
             onDismiss = { showTypeFilterDialog = false },
@@ -395,7 +406,7 @@ private fun HookLogMenuSwitchAction(
 }
 
 @Composable
-private fun HookLogTypeFilterDialog(
+private fun HookLogTypeFilterBottomSheet(
     options: List<HookLogTypeOption>,
     selectedTypes: Set<Int>,
     onDismiss: () -> Unit,
@@ -410,82 +421,143 @@ private fun HookLogTypeFilterDialog(
         properties = DialogProperties(
             dismissOnBackPress = true,
             dismissOnClickOutside = true,
+            usePlatformDefaultWidth = false,
         ),
     ) {
-        Surface(
-            shape = RoundedCornerShape(24.dp),
-            color = Color.White,
-            tonalElevation = 8.dp,
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(LogSheetScrim),
+            contentAlignment = Alignment.BottomCenter,
         ) {
-            Column(
+            Surface(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 20.dp),
+                    .navigationBarsPadding(),
+                shape = RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp),
+                color = Color.White,
+                tonalElevation = 8.dp,
             ) {
-                Text(
-                    text = "筛选日志类型",
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = LogTextPrimary,
-                    fontWeight = FontWeight.SemiBold,
-                    textAlign = TextAlign.Center,
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "参考旧版日志页逻辑，这里展示完整 Hook 类型列表，不依赖当前是否已有日志",
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = HookConfigMutedText,
-                    textAlign = TextAlign.Center,
-                )
-                Spacer(modifier = Modifier.height(18.dp))
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(76.dp),
+                    ) {
+                        IconButton(
+                            onClick = onDismiss,
+                            modifier = Modifier
+                                .align(Alignment.CenterStart)
+                                .padding(start = 12.dp),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Close,
+                                contentDescription = "关闭",
+                                tint = LogTextPrimary,
+                            )
+                        }
+                        Column(
+                            modifier = Modifier.align(Alignment.Center),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                        ) {
+                            Text(
+                                text = "筛选日志类型",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = LogTextPrimary,
+                                fontWeight = FontWeight.SemiBold,
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "选择要查看的日志类型（可多选）",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = HookConfigMutedText,
+                            )
+                        }
+                        TextButton(
+                            onClick = { pendingSelection = emptySet() },
+                            modifier = Modifier
+                                .align(Alignment.CenterEnd)
+                                .padding(end = 12.dp),
+                        ) {
+                            Text(
+                                text = "清空",
+                                color = HookConfigPrimaryBlue,
+                                fontWeight = FontWeight.SemiBold,
+                            )
+                        }
+                    }
+                    HorizontalDivider(color = LogSheetBorder)
 
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(320.dp),
-                ) {
-                    items(options, key = { it.type }) { option ->
-                        HookLogTypeFilterRow(
-                            option = option,
-                            checked = option.type in pendingSelection,
-                            onCheckedChange = {
-                                pendingSelection = if (option.type in pendingSelection) {
-                                    pendingSelection - option.type
-                                } else {
-                                    pendingSelection + option.type
-                                }
-                            },
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(300.dp),
+                    ) {
+                        items(options, key = { it.type }) { option ->
+                            HookLogTypeBottomSheetRow(
+                                option = option,
+                                checked = option.type in pendingSelection,
+                                onCheckedChange = {
+                                    pendingSelection = if (option.type in pendingSelection) {
+                                        pendingSelection - option.type
+                                    } else {
+                                        pendingSelection + option.type
+                                    }
+                                },
+                            )
+                        }
+                    }
+
+                    HorizontalDivider(color = LogSheetBorder)
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp, vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = "已选择 ${pendingSelection.size} 项",
+                            modifier = Modifier.weight(1f),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = LogTextSecondary,
+                            fontWeight = FontWeight.Medium,
                         )
-                    }
-                }
-
-                HorizontalDivider(color = HookConfigDivider)
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    TextButton(
-                        onClick = onDismiss,
-                        modifier = Modifier.weight(1f),
-                    ) {
-                        Text(text = "取消")
-                    }
-                    TextButton(
-                        onClick = { pendingSelection = emptySet() },
-                        modifier = Modifier.weight(1f),
-                    ) {
-                        Text(text = "清空")
-                    }
-                    TextButton(
-                        onClick = { onConfirm(pendingSelection) },
-                        modifier = Modifier.weight(1f),
-                    ) {
-                        Text(text = "确定")
+                        Button(
+                            onClick = onDismiss,
+                            modifier = Modifier
+                                .width(108.dp)
+                                .height(48.dp),
+                            shape = RoundedCornerShape(10.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = LogSheetButtonBg,
+                                contentColor = LogTextPrimary,
+                            ),
+                            elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp),
+                        ) {
+                            Text(
+                                text = "取消",
+                                fontWeight = FontWeight.SemiBold,
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(14.dp))
+                        Button(
+                            onClick = { onConfirm(pendingSelection) },
+                            modifier = Modifier
+                                .width(108.dp)
+                                .height(48.dp),
+                            shape = RoundedCornerShape(10.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = HookConfigPrimaryBlue,
+                                contentColor = Color.White,
+                            ),
+                            elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp),
+                        ) {
+                            Text(
+                                text = "确定",
+                                fontWeight = FontWeight.SemiBold,
+                            )
+                        }
                     }
                 }
             }
@@ -494,7 +566,7 @@ private fun HookLogTypeFilterDialog(
 }
 
 @Composable
-private fun HookLogTypeFilterRow(
+private fun HookLogTypeBottomSheetRow(
     option: HookLogTypeOption,
     checked: Boolean,
     onCheckedChange: () -> Unit,
@@ -503,19 +575,67 @@ private fun HookLogTypeFilterRow(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onCheckedChange)
-            .padding(horizontal = 18.dp, vertical = 6.dp),
+            .height(60.dp)
+            .padding(horizontal = 20.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        Surface(
+            modifier = Modifier.size(36.dp),
+            shape = RoundedCornerShape(10.dp),
+            color = LogSheetIconBg,
+            tonalElevation = 0.dp,
+            border = BorderStroke(1.dp, LogSheetBorder),
+        ) {
+            Icon(
+                imageVector = hookLogTypeIcon(option),
+                contentDescription = null,
+                modifier = Modifier.padding(8.dp),
+                tint = hookLogTypeColor(option),
+            )
+        }
+        Spacer(modifier = Modifier.width(14.dp))
         Text(
             text = option.title,
             modifier = Modifier.weight(1f),
-            style = MaterialTheme.typography.bodyMedium,
+            style = MaterialTheme.typography.bodyLarge,
             color = LogTextPrimary,
+            fontWeight = FontWeight.Medium,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
         )
         Checkbox(
             checked = checked,
             onCheckedChange = { onCheckedChange() },
+            colors = CheckboxDefaults.colors(
+                checkedColor = HookConfigPrimaryBlue,
+                uncheckedColor = Color(0xFFC4CAD4),
+                checkmarkColor = Color.White,
+            ),
         )
+    }
+    HorizontalDivider(
+        modifier = Modifier.padding(start = 70.dp),
+        color = LogSheetBorder,
+    )
+}
+
+private fun hookLogTypeIcon(option: HookLogTypeOption): ImageVector {
+    return when (option.type % 5) {
+        0 -> Icons.Outlined.BugReport
+        1 -> Icons.Outlined.FilterList
+        2 -> Icons.Outlined.Tune
+        3 -> Icons.Outlined.Search
+        else -> Icons.Outlined.CheckCircle
+    }
+}
+
+private fun hookLogTypeColor(option: HookLogTypeOption): Color {
+    return when (option.type % 5) {
+        0 -> Color(0xFF2F6DF6)
+        1 -> Color(0xFF24B86C)
+        2 -> Color(0xFFFF7A2F)
+        3 -> Color(0xFF22B8C7)
+        else -> Color(0xFF7D5DF6)
     }
 }
 

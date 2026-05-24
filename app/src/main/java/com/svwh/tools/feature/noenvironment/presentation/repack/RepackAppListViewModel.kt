@@ -76,6 +76,7 @@ class RepackAppListViewModel @Inject constructor(
     fun stopRepackProgress() {
         repackJob?.cancel()
         repackJob = null
+        repackWorkflowRunner.stop()
         repackProgressController.stopSession()
     }
 

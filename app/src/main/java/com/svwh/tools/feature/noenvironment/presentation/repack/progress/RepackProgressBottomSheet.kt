@@ -51,10 +51,6 @@ private val ActionTextHorizontalPadding = 8.dp
 private val ActionTextVerticalPadding = 4.dp
 private val ActionRippleCornerRadius = 4.dp
 
-/**
- * 固定在页面底部的进度面板：仅在 [RepackProgressState.visible] 首次为 true 时做进入动画，
- * 后续步骤更新只刷新内容，不会重复弹窗。
- */
 @Composable
 fun RepackProgressSheetHost(
     state: RepackProgressState,
@@ -173,9 +169,7 @@ private fun RepackProgressPanel(
             )
 
             Spacer(modifier = Modifier.height(16.dp))
-
             HorizontalDivider(color = Color(0xFFE8ECF1))
-
             Spacer(modifier = Modifier.height(14.dp))
 
             if (state.steps.isEmpty()) {
@@ -186,7 +180,7 @@ private fun RepackProgressPanel(
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
-                        text = "正在准备打包流程…",
+                        text = "正在准备打包流程...",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )

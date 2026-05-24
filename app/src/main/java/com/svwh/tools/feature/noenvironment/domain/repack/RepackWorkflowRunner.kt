@@ -7,4 +7,6 @@ import com.svwh.tools.feature.environment.domain.model.InstalledAppItem
  */
 interface RepackWorkflowRunner {
     suspend fun start(app: InstalledAppItem)
+
+    fun stop()
 }

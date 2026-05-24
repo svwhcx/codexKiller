@@ -36,6 +36,7 @@ fun RepackAppListRoute(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val repackProgressState by viewModel.repackProgressState.collectAsStateWithLifecycle()
+    val installCoordinator = rememberRepackInstallCoordinator()
 
     Box(modifier = Modifier.fillMaxSize()) {
         RepackAppListScreen(
@@ -48,7 +49,7 @@ fun RepackAppListRoute(
             state = repackProgressState,
             onDismiss = viewModel::dismissRepackProgress,
             onStop = viewModel::stopRepackProgress,
-            onInstall = viewModel::installRepackResult,
+            onInstall = { installCoordinator.install(repackProgressState) },
             onDetails = viewModel::showRepackDetails,
         )
     }
