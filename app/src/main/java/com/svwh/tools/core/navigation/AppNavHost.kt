@@ -44,6 +44,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.svwh.tools.core.datastore.UserSettings
 import com.svwh.tools.feature.environment.presentation.EnvironmentRoute
+import com.svwh.tools.feature.hookconfig.presentation.FridaScriptEditorRoute
 import com.svwh.tools.feature.hookconfig.presentation.HookConfigRoute
 import com.svwh.tools.feature.hookconfig.presentation.UserHookConfigEditorRoute
 import com.svwh.tools.feature.noenvironment.presentation.NoEnvironmentRoute
@@ -163,6 +164,16 @@ fun AppNavHost(
                         ),
                     )
                 },
+                onNavigateToFridaScriptEditor = { envType, packageName, scriptId, appName ->
+                    navController.navigate(
+                        AppDestination.fridaScriptEditorRoute(
+                            envType = envType,
+                            packageName = packageName,
+                            scriptId = scriptId,
+                            appName = appName,
+                        ),
+                    )
+                },
             )
         }
         composable(
@@ -206,6 +217,50 @@ fun AppNavHost(
                 packageName = backStackEntry.arguments?.getString("packageName")?.let(Uri::decode).orEmpty(),
                 appName = backStackEntry.arguments?.getString("appName")?.let(Uri::decode).orEmpty(),
                 configId = backStackEntry.arguments?.getLong("configId") ?: 0L,
+                onBackClick = navController::popBackStack,
+            )
+        }
+        composable(
+            route = AppDestination.FRIDA_SCRIPT_EDITOR_ROUTE,
+            arguments = listOf(
+                navArgument("envType") { type = NavType.StringType },
+                navArgument("packageName") { type = NavType.StringType },
+                navArgument("scriptId") { type = NavType.LongType },
+                navArgument("appName") {
+                    type = NavType.StringType
+                    defaultValue = ""
+                },
+            ),
+            enterTransition = {
+                slideInHorizontally(
+                    animationSpec = tween(300),
+                    initialOffsetX = { fullWidth -> fullWidth },
+                )
+            },
+            exitTransition = {
+                slideOutHorizontally(
+                    animationSpec = tween(300),
+                    targetOffsetX = { fullWidth -> -fullWidth / 3 },
+                )
+            },
+            popEnterTransition = {
+                slideInHorizontally(
+                    animationSpec = tween(300),
+                    initialOffsetX = { fullWidth -> -fullWidth / 3 },
+                )
+            },
+            popExitTransition = {
+                slideOutHorizontally(
+                    animationSpec = tween(300),
+                    targetOffsetX = { fullWidth -> fullWidth },
+                )
+            },
+        ) { backStackEntry ->
+            FridaScriptEditorRoute(
+                envType = backStackEntry.arguments?.getString("envType")?.let(Uri::decode).orEmpty(),
+                packageName = backStackEntry.arguments?.getString("packageName")?.let(Uri::decode).orEmpty(),
+                appName = backStackEntry.arguments?.getString("appName")?.let(Uri::decode).orEmpty(),
+                scriptId = backStackEntry.arguments?.getLong("scriptId") ?: 0L,
                 onBackClick = navController::popBackStack,
             )
         }

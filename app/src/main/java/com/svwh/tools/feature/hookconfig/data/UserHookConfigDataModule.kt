@@ -1,6 +1,8 @@
 package com.svwh.tools.feature.hookconfig.data
 
 import com.svwh.tools.feature.hookconfig.data.user.RoomUserHookConfigRepository
+import com.svwh.tools.feature.hookconfig.data.frida.RoomFridaScriptRepository
+import com.svwh.tools.feature.hookconfig.domain.repository.FridaScriptRepository
 import com.svwh.tools.feature.hookconfig.domain.repository.UserHookConfigRepository
 import dagger.Binds
 import dagger.Module
@@ -16,4 +18,10 @@ abstract class UserHookConfigDataModule {
     abstract fun bindUserHookConfigRepository(
         impl: RoomUserHookConfigRepository,
     ): UserHookConfigRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindFridaScriptRepository(
+        impl: RoomFridaScriptRepository,
+    ): FridaScriptRepository
 }

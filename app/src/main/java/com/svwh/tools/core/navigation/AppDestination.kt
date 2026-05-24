@@ -8,6 +8,8 @@ object AppDestination {
     const val HOOK_CONFIG_ROUTE = "hook_config/{envType}/{packageName}?appName={appName}"
     const val USER_HOOK_CONFIG_EDITOR_ROUTE =
         "user_hook_config_editor/{envType}/{packageName}/{configId}?appName={appName}"
+    const val FRIDA_SCRIPT_EDITOR_ROUTE =
+        "frida_script_editor/{envType}/{packageName}/{scriptId}?appName={appName}"
 
     fun hookConfigRoute(
         envType: String,
@@ -24,5 +26,14 @@ object AppDestination {
         appName: String,
     ): String {
         return "user_hook_config_editor/${Uri.encode(envType)}/${Uri.encode(packageName)}/${configId}?appName=${Uri.encode(appName)}"
+    }
+
+    fun fridaScriptEditorRoute(
+        envType: String,
+        packageName: String,
+        scriptId: Long,
+        appName: String,
+    ): String {
+        return "frida_script_editor/${Uri.encode(envType)}/${Uri.encode(packageName)}/${scriptId}?appName=${Uri.encode(appName)}"
     }
 }

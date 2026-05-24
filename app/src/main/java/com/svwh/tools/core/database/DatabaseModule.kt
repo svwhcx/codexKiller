@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
+import com.svwh.tools.core.database.dao.FridaScriptDao
 import com.svwh.tools.core.database.dao.HookStateDao
 import com.svwh.tools.core.database.dao.ToolHistoryDao
 import com.svwh.tools.core.database.dao.UserHookConfigDao
@@ -100,6 +101,32 @@ object DatabaseModule {
         }
     }
 
+    private val Migration3To4 = object : Migration(3, 4) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `frida_scripts` (
+                    `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                    `packageName` TEXT NOT NULL,
+                    `envType` TEXT NOT NULL,
+                    `name` TEXT NOT NULL,
+                    `scriptContent` TEXT NOT NULL,
+                    `enabled` INTEGER NOT NULL,
+                    `createdAtMillis` INTEGER NOT NULL,
+                    `updatedAtMillis` INTEGER NOT NULL
+                )
+                """.trimIndent(),
+            )
+            db.execSQL(
+                """
+                CREATE INDEX IF NOT EXISTS
+                `index_frida_scripts_packageName_envType`
+                ON `frida_scripts` (`packageName`, `envType`)
+                """.trimIndent(),
+            )
+        }
+    }
+
     @Provides
     @Singleton
     fun provideAppDatabase(
@@ -110,7 +137,7 @@ object DatabaseModule {
             AppDatabase::class.java,
             "stool.db",
         )
-            .addMigrations(Migration1To2, Migration2To3)
+            .addMigrations(Migration1To2, Migration2To3, Migration3To4)
             .build()
     }
 
@@ -127,5 +154,10 @@ object DatabaseModule {
     @Provides
     fun provideUserHookConfigDao(database: AppDatabase): UserHookConfigDao {
         return database.userHookConfigDao()
+    }
+
+    @Provides
+    fun provideFridaScriptDao(database: AppDatabase): FridaScriptDao {
+        return database.fridaScriptDao()
     }
 }

@@ -60,6 +60,7 @@ fun HookConfigRoute(
     envType: String,
     onBackClick: () -> Unit,
     onNavigateToUserConfigEditor: (envType: String, packageName: String, configId: Long, appName: String) -> Unit,
+    onNavigateToFridaScriptEditor: (envType: String, packageName: String, scriptId: Long, appName: String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val tabs = remember {
@@ -72,13 +73,14 @@ fun HookConfigRoute(
     }
     val pagerState = rememberPagerState(pageCount = { tabs.size })
     val coroutineScope = rememberCoroutineScope()
+    val displayName = appName.ifBlank { packageName }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
         containerColor = HookConfigPageBackground,
         topBar = {
             HookConfigHeader(
-                appName = appName.ifBlank { packageName },
+                appName = displayName,
                 packageName = packageName,
                 envType = envType,
                 tabs = tabs,
@@ -107,19 +109,27 @@ fun HookConfigRoute(
                     HookConfigTab.User -> UserHookConfigPage(
                         envType = envType,
                         packageName = packageName,
-                        appName = appName.ifBlank { packageName },
+                        appName = displayName,
                         onNavigateToEditor = { configId ->
                             onNavigateToUserConfigEditor(
                                 envType,
                                 packageName,
                                 configId,
-                                appName.ifBlank { packageName },
+                                displayName,
                             )
                         },
                     )
-                    HookConfigTab.Frida -> PlaceholderConfigPage(
-                        title = "Frida",
-                        message = "后续用于管理 Frida 脚本、注入参数和运行状态。",
+                    HookConfigTab.Frida -> FridaScriptPage(
+                        envType = envType,
+                        packageName = packageName,
+                        onNavigateToEditor = { scriptId ->
+                            onNavigateToFridaScriptEditor(
+                                envType,
+                                packageName,
+                                scriptId,
+                                displayName,
+                            )
+                        },
                     )
                     HookConfigTab.Log -> HookLogPage(
                         envType = envType,
