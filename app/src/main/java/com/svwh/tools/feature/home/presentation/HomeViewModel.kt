@@ -1,40 +1,53 @@
 package com.svwh.tools.feature.home.presentation
 
 import androidx.lifecycle.ViewModel
-import com.svwh.tools.feature.home.domain.model.ToolShortcut
+import androidx.lifecycle.viewModelScope
+import com.svwh.tools.core.common.AppResult
+import com.svwh.tools.feature.hookconfig.domain.model.FridaScriptItem
+import com.svwh.tools.feature.hookconfig.domain.model.GlobalFridaScriptScope
+import com.svwh.tools.feature.hookconfig.domain.repository.FridaScriptRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 data class HomeUiState(
-    val tools: List<ToolShortcut> = emptyList(),
+    val globalFridaScripts: List<FridaScriptItem> = emptyList(),
+    val isLoadingFridaScripts: Boolean = false,
 )
 
 @HiltViewModel
-class HomeViewModel @Inject constructor() : ViewModel() {
-    private val _uiState = MutableStateFlow(
-        HomeUiState(
-            tools = listOf(
-                ToolShortcut(
-                    id = "permissions",
-                    title = "Permission Center",
-                    description = "A safe entry point for runtime permissions.",
-                ),
-                ToolShortcut(
-                    id = "network",
-                    title = "Network Toolkit",
-                    description = "Retrofit, OkHttp, errors, and connectivity are ready.",
-                ),
-                ToolShortcut(
-                    id = "theme",
-                    title = "Theme Lab",
-                    description = "Light, dark, and dynamic color support.",
-                ),
-            ),
-        ),
-    )
-
+class HomeViewModel @Inject constructor(
+    private val fridaScriptRepository: FridaScriptRepository,
+) : ViewModel() {
+    private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
+
+    init {
+        loadGlobalFridaScripts()
+    }
+
+    fun loadGlobalFridaScripts() {
+        _uiState.value = _uiState.value.copy(isLoadingFridaScripts = true)
+        viewModelScope.launch {
+            when (
+                val result = fridaScriptRepository.getScripts(
+                    envType = GlobalFridaScriptScope.ENV_TYPE,
+                    packageName = GlobalFridaScriptScope.PACKAGE_NAME,
+                )
+            ) {
+                is AppResult.Success -> {
+                    _uiState.value = _uiState.value.copy(
+                        globalFridaScripts = result.data,
+                        isLoadingFridaScripts = false,
+                    )
+                }
+                is AppResult.Failure -> {
+                    _uiState.value = _uiState.value.copy(isLoadingFridaScripts = false)
+                }
+            }
+        }
+    }
 }

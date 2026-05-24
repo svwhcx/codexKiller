@@ -5,6 +5,7 @@ import android.net.Uri
 object AppDestination {
     const val MAIN = "main"
     const val REPACK_APP_LIST = "repack_app_list"
+    const val GLOBAL_FRIDA_SCRIPTS = "global_frida_scripts"
     const val HOOK_CONFIG_ROUTE = "hook_config/{envType}/{packageName}?appName={appName}"
     const val USER_HOOK_CONFIG_EDITOR_ROUTE =
         "user_hook_config_editor/{envType}/{packageName}/{configId}?appName={appName}"

@@ -45,8 +45,11 @@ import androidx.navigation.navArgument
 import com.svwh.tools.core.datastore.UserSettings
 import com.svwh.tools.feature.environment.presentation.EnvironmentRoute
 import com.svwh.tools.feature.hookconfig.presentation.FridaScriptEditorRoute
+import com.svwh.tools.feature.hookconfig.presentation.GlobalFridaScriptRoute
 import com.svwh.tools.feature.hookconfig.presentation.HookConfigRoute
 import com.svwh.tools.feature.hookconfig.presentation.UserHookConfigEditorRoute
+import com.svwh.tools.feature.hookconfig.domain.model.GlobalFridaScriptScope
+import com.svwh.tools.feature.home.presentation.HomeRoute
 import com.svwh.tools.feature.noenvironment.presentation.NoEnvironmentRoute
 import com.svwh.tools.feature.noenvironment.presentation.repack.RepackAppListRoute
 import com.svwh.tools.feature.settings.presentation.SettingsRoute
@@ -80,6 +83,19 @@ fun AppNavHost(
                             envType = envType,
                             packageName = packageName,
                             appName = appName,
+                        ),
+                    )
+                },
+                onNavigateToGlobalFridaScripts = {
+                    navController.navigate(AppDestination.GLOBAL_FRIDA_SCRIPTS)
+                },
+                onCreateGlobalFridaScript = {
+                    navController.navigate(
+                        AppDestination.fridaScriptEditorRoute(
+                            envType = GlobalFridaScriptScope.ENV_TYPE,
+                            packageName = GlobalFridaScriptScope.PACKAGE_NAME,
+                            scriptId = 0L,
+                            appName = GlobalFridaScriptScope.APP_NAME,
                         ),
                     )
                 },
@@ -171,6 +187,47 @@ fun AppNavHost(
                             packageName = packageName,
                             scriptId = scriptId,
                             appName = appName,
+                        ),
+                    )
+                },
+            )
+        }
+        composable(
+            route = AppDestination.GLOBAL_FRIDA_SCRIPTS,
+            enterTransition = {
+                slideInHorizontally(
+                    animationSpec = tween(300),
+                    initialOffsetX = { fullWidth -> fullWidth },
+                )
+            },
+            exitTransition = {
+                slideOutHorizontally(
+                    animationSpec = tween(300),
+                    targetOffsetX = { fullWidth -> -fullWidth / 3 },
+                )
+            },
+            popEnterTransition = {
+                slideInHorizontally(
+                    animationSpec = tween(300),
+                    initialOffsetX = { fullWidth -> -fullWidth / 3 },
+                )
+            },
+            popExitTransition = {
+                slideOutHorizontally(
+                    animationSpec = tween(300),
+                    targetOffsetX = { fullWidth -> fullWidth },
+                )
+            },
+        ) {
+            GlobalFridaScriptRoute(
+                onBackClick = navController::popBackStack,
+                onNavigateToEditor = { scriptId ->
+                    navController.navigate(
+                        AppDestination.fridaScriptEditorRoute(
+                            envType = GlobalFridaScriptScope.ENV_TYPE,
+                            packageName = GlobalFridaScriptScope.PACKAGE_NAME,
+                            scriptId = scriptId,
+                            appName = GlobalFridaScriptScope.APP_NAME,
                         ),
                     )
                 },
@@ -273,6 +330,8 @@ private fun MainTabsScreen(
     startupSettings: UserSettings,
     onNavigateToRepackAppList: () -> Unit,
     onNavigateToHookConfig: (envType: String, packageName: String, appName: String) -> Unit,
+    onNavigateToGlobalFridaScripts: () -> Unit,
+    onCreateGlobalFridaScript: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val tabs = remember(startupSettings) {
@@ -318,6 +377,11 @@ private fun MainTabsScreen(
                     },
                 )
                 AppRoute.Settings -> SettingsRoute()
+                AppRoute.Home -> HomeRoute(
+                    onOpenSettings = {},
+                    onOpenFridaScripts = onNavigateToGlobalFridaScripts,
+                    onCreateFridaScript = onCreateGlobalFridaScript,
+                )
                 else -> TabTextPage(tab = tab)
             }
         }

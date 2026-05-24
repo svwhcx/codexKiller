@@ -6,6 +6,7 @@ import com.svwh.tools.core.common.AppError
 import com.svwh.tools.core.common.AppResult
 import com.svwh.tools.feature.hookconfig.domain.model.FridaScriptDraft
 import com.svwh.tools.feature.hookconfig.domain.model.FridaScriptItem
+import com.svwh.tools.feature.hookconfig.domain.model.GlobalFridaScriptScope
 import com.svwh.tools.feature.hookconfig.domain.repository.FridaScriptRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -23,12 +24,14 @@ internal data class FridaScriptUiState(
     val envType: String = "",
     val packageName: String = "",
     val items: List<FridaScriptItem> = emptyList(),
+    val globalItems: List<FridaScriptItem> = emptyList(),
     val editingDraft: FridaScriptDraft? = null,
     val selectedIds: Set<Long> = emptySet(),
     val isLoading: Boolean = false,
     val isSaving: Boolean = false,
     val isSelectionMode: Boolean = false,
     val saveSuccessToken: Long = 0L,
+    val showImportDialog: Boolean = false,
     val errorMessage: String? = null,
 )
 
@@ -78,6 +81,27 @@ internal class FridaScriptViewModel @Inject constructor(
                         isLoading = false,
                         errorMessage = result.error.toUserMessage(),
                     )
+                }
+            }
+        }
+    }
+
+    fun loadGlobalScripts() {
+        viewModelScope.launch {
+            when (
+                val result = repository.getScripts(
+                    envType = GlobalFridaScriptScope.ENV_TYPE,
+                    packageName = GlobalFridaScriptScope.PACKAGE_NAME,
+                )
+            ) {
+                is AppResult.Success -> {
+                    _uiState.value = _uiState.value.copy(
+                        globalItems = result.data,
+                        errorMessage = null,
+                    )
+                }
+                is AppResult.Failure -> {
+                    _uiState.value = _uiState.value.copy(errorMessage = result.error.toUserMessage())
                 }
             }
         }
@@ -223,6 +247,45 @@ internal class FridaScriptViewModel @Inject constructor(
         }
     }
 
+    fun openImportDialog() {
+        _uiState.value = _uiState.value.copy(showImportDialog = true, errorMessage = null)
+        loadGlobalScripts()
+    }
+
+    fun closeImportDialog() {
+        _uiState.value = _uiState.value.copy(showImportDialog = false)
+    }
+
+    fun importGlobalScript(item: FridaScriptItem) {
+        val state = _uiState.value
+        if (state.packageName.isBlank() || state.envType.isBlank()) return
+        val importedName = uniqueImportedName(item.name, state.items)
+        viewModelScope.launch {
+            when (
+                val result = repository.saveScript(
+                    FridaScriptDraft(
+                        packageName = state.packageName,
+                        envType = state.envType,
+                        name = importedName,
+                        scriptContent = item.scriptContent,
+                        enabled = item.enabled,
+                    ),
+                )
+            ) {
+                is AppResult.Success -> {
+                    _uiState.value = _uiState.value.copy(
+                        showImportDialog = false,
+                        errorMessage = null,
+                    )
+                    loadScripts()
+                }
+                is AppResult.Failure -> {
+                    _uiState.value = _uiState.value.copy(errorMessage = result.error.toUserMessage())
+                }
+            }
+        }
+    }
+
     private fun validateDraftForSave(
         draft: FridaScriptDraft,
         existingItems: List<FridaScriptItem>,
@@ -234,6 +297,21 @@ internal class FridaScriptViewModel @Inject constructor(
         }
         if (hasDuplicateName) return ERROR_SCRIPT_NAME_DUPLICATE
         return null
+    }
+
+    private fun uniqueImportedName(
+        baseName: String,
+        existingItems: List<FridaScriptItem>,
+    ): String {
+        val names = existingItems.map { it.name.trim() }.toSet()
+        val trimmed = baseName.trim().ifBlank { "Imported Script" }
+        if (trimmed !in names) return trimmed
+        var index = 2
+        while (true) {
+            val candidate = "$trimmed ($index)"
+            if (candidate !in names) return candidate
+            index++
+        }
     }
 
     private fun AppError.toUserMessage(): String {
