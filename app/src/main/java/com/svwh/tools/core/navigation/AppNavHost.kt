@@ -89,16 +89,6 @@ fun AppNavHost(
                 onNavigateToGlobalFridaScripts = {
                     navController.navigate(AppDestination.GLOBAL_FRIDA_SCRIPTS)
                 },
-                onCreateGlobalFridaScript = {
-                    navController.navigate(
-                        AppDestination.fridaScriptEditorRoute(
-                            envType = GlobalFridaScriptScope.ENV_TYPE,
-                            packageName = GlobalFridaScriptScope.PACKAGE_NAME,
-                            scriptId = 0L,
-                            appName = GlobalFridaScriptScope.APP_NAME,
-                        ),
-                    )
-                },
             )
         }
         composable(
@@ -331,7 +321,6 @@ private fun MainTabsScreen(
     onNavigateToRepackAppList: () -> Unit,
     onNavigateToHookConfig: (envType: String, packageName: String, appName: String) -> Unit,
     onNavigateToGlobalFridaScripts: () -> Unit,
-    onCreateGlobalFridaScript: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val tabs = remember(startupSettings) {
@@ -378,9 +367,7 @@ private fun MainTabsScreen(
                 )
                 AppRoute.Settings -> SettingsRoute()
                 AppRoute.Home -> HomeRoute(
-                    onOpenSettings = {},
                     onOpenFridaScripts = onNavigateToGlobalFridaScripts,
-                    onCreateFridaScript = onCreateGlobalFridaScript,
                 )
                 else -> TabTextPage(tab = tab)
             }

@@ -1,7 +1,9 @@
 package com.svwh.tools.feature.home.presentation
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -9,247 +11,170 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.Code
-import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.svwh.tools.core.designsystem.component.SToolScaffold
-import com.svwh.tools.feature.hookconfig.domain.model.FridaScriptItem
+import androidx.compose.ui.unit.sp
+
+private val HomeBackground = Color(0xFFF4F6F9)
+private val HomePrimary = Color(0xFF1677FF)
+private val HomeTitleColor = Color(0xFF1F2330)
+private val HomeSubtitleColor = Color(0xFF8A93A4)
+private val HomeArrowColor = Color(0xFFB8C0CC)
 
 @Composable
 fun HomeRoute(
-    onOpenSettings: () -> Unit,
     onOpenFridaScripts: () -> Unit,
-    onCreateFridaScript: () -> Unit,
-    viewModel: HomeViewModel = hiltViewModel(),
 ) {
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val lifecycleOwner = LocalLifecycleOwner.current
-
-    DisposableEffect(lifecycleOwner) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) {
-                viewModel.loadGlobalFridaScripts()
-            }
-        }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose {
-            lifecycleOwner.lifecycle.removeObserver(observer)
-        }
-    }
-
-    HomeScreen(
-        uiState = uiState,
-        onOpenSettings = onOpenSettings,
-        onOpenFridaScripts = onOpenFridaScripts,
-        onCreateFridaScript = onCreateFridaScript,
-    )
+    HomeScreen(onOpenFridaScripts = onOpenFridaScripts)
 }
 
 @Composable
-private fun HomeScreen(
-    uiState: HomeUiState,
-    onOpenSettings: () -> Unit,
-    onOpenFridaScripts: () -> Unit,
-    onCreateFridaScript: () -> Unit,
-) {
-    SToolScaffold(
-        title = "STool",
-        actionIcon = Icons.Outlined.Settings,
-        actionContentDescription = "Open settings",
-        onActionClick = onOpenSettings,
-    ) { paddingValues ->
-        LazyColumn(
+private fun HomeScreen(onOpenFridaScripts: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(HomeBackground)
+            .statusBarsPadding()
+            .padding(horizontal = 16.dp),
+    ) {
+        HomeTitle()
+        Spacer(modifier = Modifier.height(16.dp))
+        FridaScriptManagerCard(onClick = onOpenFridaScripts)
+    }
+}
+
+@Composable
+private fun HomeTitle() {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 18.dp, bottom = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues),
-            contentPadding = PaddingValues(20.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            item {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(
-                        text = "\u5de5\u5177",
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                    Text(
-                        text = "\u7ba1\u7406\u5e38\u7528\u80fd\u529b\u548c\u53ef\u590d\u7528\u914d\u7f6e\u3002",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-
-            item {
-                FridaScriptManagerCard(
-                    scripts = uiState.globalFridaScripts,
-                    isLoading = uiState.isLoadingFridaScripts,
-                    onOpen = onOpenFridaScripts,
-                    onCreate = onCreateFridaScript,
-                )
-            }
-        }
+                .height(20.dp)
+                .width(4.dp)
+                .clip(RoundedCornerShape(2.dp))
+                .background(HomePrimary),
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = "首页",
+            color = HomeTitleColor,
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold,
+        )
     }
 }
 
 @Composable
-private fun FridaScriptManagerCard(
-    scripts: List<FridaScriptItem>,
-    isLoading: Boolean,
-    onOpen: () -> Unit,
-    onCreate: () -> Unit,
-) {
+private fun FridaScriptManagerCard(onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onOpen),
+            .clip(RoundedCornerShape(16.dp))
+            .clickable(onClick = onClick),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
-        Column(
-            modifier = Modifier.padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
-        ) {
+        Box(modifier = Modifier.fillMaxWidth()) {
+            DecorativeCircle(
+                color = Color(0xFFE6F0FF),
+                size = 110.dp,
+                offsetX = 200.dp,
+                offsetY = (-40).dp,
+            )
+            DecorativeCircle(
+                color = Color(0xFFEEF4FF),
+                size = 80.dp,
+                offsetX = 250.dp,
+                offsetY = 30.dp,
+            )
+
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 18.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Surface(
-                    modifier = Modifier.size(42.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                    modifier = Modifier.size(44.dp),
+                    shape = RoundedCornerShape(10.dp),
+                    color = Color(0xFFF1F5FB),
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.Code,
                         contentDescription = null,
-                        modifier = Modifier.padding(9.dp),
-                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(10.dp),
+                        tint = HomePrimary,
                     )
                 }
                 Spacer(modifier = Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Frida \u811a\u672c\u7ba1\u7406",
-                        style = MaterialTheme.typography.titleMedium,
+                        text = "Frida 脚本管理",
+                        color = HomeTitleColor,
+                        fontSize = 16.sp,
                         fontWeight = FontWeight.SemiBold,
                     )
+                    Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = if (isLoading) {
-                            "\u6b63\u5728\u8bfb\u53d6\u5168\u5c40\u811a\u672c"
-                        } else {
-                            "\u5df2\u4fdd\u5b58 ${scripts.size} \u4e2a\u53ef\u590d\u7528\u811a\u672c"
-                        },
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        text = "管理、配置和复用 Frida 脚本",
+                        color = HomeSubtitleColor,
+                        fontSize = 12.sp,
                     )
                 }
-            }
-
-            if (scripts.isEmpty()) {
-                Text(
-                    text = "\u6682\u65e0\u5168\u5c40 Frida \u811a\u672c",
-                    modifier = Modifier.fillMaxWidth(),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                Icon(
+                    imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowRight,
+                    contentDescription = null,
+                    tint = HomeArrowColor,
+                    modifier = Modifier.size(20.dp),
                 )
-            } else {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    scripts.take(3).forEach { script ->
-                        FridaScriptPreviewRow(script = script)
-                    }
-                    if (scripts.size > 3) {
-                        Text(
-                            text = "\u8fd8\u6709 ${scripts.size - 3} \u4e2a\u811a\u672c",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.primary,
-                        )
-                    }
-                }
-            }
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                OutlinedButton(
-                    onClick = onOpen,
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(12.dp),
-                ) {
-                    Text(text = "\u7ba1\u7406")
-                }
-                Button(
-                    onClick = onCreate,
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(12.dp),
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Add,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp),
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(text = "\u65b0\u589e")
-                }
             }
         }
     }
 }
 
 @Composable
-private fun FridaScriptPreviewRow(script: FridaScriptItem) {
-    Row(
+private fun DecorativeCircle(
+    color: Color,
+    size: androidx.compose.ui.unit.Dp,
+    offsetX: androidx.compose.ui.unit.Dp,
+    offsetY: androidx.compose.ui.unit.Dp,
+) {
+    Box(
         modifier = Modifier
-            .fillMaxWidth()
-            .height(34.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Surface(
-            modifier = Modifier.size(7.dp),
-            shape = RoundedCornerShape(50),
-            color = if (script.enabled) MaterialTheme.colorScheme.primary else Color(0xFFB8C0CC),
-        ) {}
-        Spacer(modifier = Modifier.width(10.dp))
-        Text(
-            text = script.name,
-            modifier = Modifier.weight(1f),
-            style = MaterialTheme.typography.bodyMedium,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-        Text(
-            text = if (script.enabled) "\u542f\u7528" else "\u505c\u7528",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
+            .offset(x = offsetX, y = offsetY)
+            .size(size)
+            .clip(CircleShape)
+            .background(
+                Brush.radialGradient(
+                    colors = listOf(color, Color.Transparent),
+                ),
+            ),
+    )
 }
