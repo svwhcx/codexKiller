@@ -13,4 +13,5 @@ data class AppendRepackStepCommand(
     val autoStart: Boolean = true,
     val isTerminal: Boolean = false,
     val terminalOutcome: RepackTerminalOutcome? = null,
+    val detail: String? = null,
 )

@@ -8,4 +8,5 @@ data class RepackProgressState(
     val steps: List<RepackStep> = emptyList(),
     val sessionFinished: Boolean = false,
     val outputApkPath: String = "",
+    val errorDetail: String = "",
 )

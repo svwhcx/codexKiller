@@ -71,7 +71,10 @@ class WorkManagerRepackWorkflowRunner @Inject constructor(
                 request,
             )
         } catch (throwable: Throwable) {
-            appendTerminalFailure(throwable.message ?: "后台任务提交失败")
+            appendTerminalFailure(
+                message = throwable.message ?: "后台任务提交失败",
+                detail = throwable.stackTraceToString(),
+            )
             return
         }
 
@@ -81,7 +84,8 @@ class WorkManagerRepackWorkflowRunner @Inject constructor(
                     operation.result.get()
                 } catch (throwable: Throwable) {
                     appendTerminalFailure(
-                        throwable.cause?.message ?: throwable.message ?: "后台任务提交失败",
+                        message = throwable.cause?.message ?: throwable.message ?: "后台任务提交失败",
+                        detail = throwable.cause?.stackTraceToString() ?: throwable.stackTraceToString(),
                     )
                 }
             },
@@ -118,7 +122,11 @@ class WorkManagerRepackWorkflowRunner @Inject constructor(
                         )
                     }
                     WorkInfo.State.FAILED -> {
-                        appendTerminalFailure("后台任务启动失败")
+                        appendTerminalFailure(
+                            message = workInfo.outputData.getString(RepackWorker.KEY_ERROR_MESSAGE)
+                                ?: "后台任务启动失败",
+                            detail = workInfo.outputData.getString(RepackWorker.KEY_ERROR_DETAIL),
+                        )
                         workInfoLiveData.removeObserver(this)
                     }
                     WorkInfo.State.CANCELLED -> {
@@ -135,7 +143,10 @@ class WorkManagerRepackWorkflowRunner @Inject constructor(
         workInfoLiveData.observeForever(observer)
     }
 
-    private fun appendTerminalFailure(message: String) {
+    private fun appendTerminalFailure(
+        message: String,
+        detail: String? = null,
+    ) {
         progressController.updateStep(
             UpdateRepackStepCommand(
                 stepId = RepackWorker.STEP_QUEUE,
@@ -149,6 +160,7 @@ class WorkManagerRepackWorkflowRunner @Inject constructor(
                 autoStart = true,
                 isTerminal = true,
                 terminalOutcome = RepackTerminalOutcome.Failure,
+                detail = detail,
             ),
         )
         progressController.updateStep(

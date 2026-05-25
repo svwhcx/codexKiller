@@ -19,7 +19,6 @@ import javax.xml.transform.stream.StreamResult
  */
 class ManifestModify : IApkModification {
 
-    private val SHARED_USER_ID = "com.svwh.tools"
     override fun modify(apkProcessorContext: ApkProcessorContext): IApkModification {
         var axmlDocument = apkProcessorContext.axmlDocument
         val manifestNode = axmlDocument!!.getElementsByTagName("manifest").item(0);
@@ -30,8 +29,8 @@ class ManifestModify : IApkModification {
             if (node.nodeName.equals("application")) {
                 // 1. 配置唯一标识
                 val killerMetadata = axmlDocument.createElement("meta-data");
-                killerMetadata.setAttribute("android:name", SHARED_USER_ID)
-                killerMetadata.setAttribute("android:value", SHARED_USER_ID)
+                killerMetadata.setAttribute("android:name", ApkConstant.NO_ENV_METADATA_NAME)
+                killerMetadata.setAttribute("android:value", ApkConstant.NO_ENV_METADATA_VALUE)
                 node.appendChild(killerMetadata);
                 // 2. 构建provider
                 val providerElement = axmlDocument.createElement("provider");

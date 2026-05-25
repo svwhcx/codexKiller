@@ -55,7 +55,16 @@ class RepackProgressControllerImpl @Inject constructor() : RepackProgressControl
                 terminalOutcome = command.terminalOutcome,
             )
 
-            current.copy(steps = current.steps + newStep)
+            val errorDetail = if (command.isTerminal && !command.detail.isNullOrBlank()) {
+                command.detail
+            } else {
+                current.errorDetail
+            }
+
+            current.copy(
+                steps = current.steps + newStep,
+                errorDetail = errorDetail.orEmpty(),
+            )
         }
     }
 

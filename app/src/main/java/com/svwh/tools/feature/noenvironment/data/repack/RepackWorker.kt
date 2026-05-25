@@ -3,6 +3,7 @@ package com.svwh.tools.feature.noenvironment.data.repack
 import android.content.Context
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
+import androidx.work.workDataOf
 import androidx.work.WorkerParameters
 import com.svwh.tools.feature.noenvironment.domain.model.AppendRepackStepCommand
 import com.svwh.tools.feature.noenvironment.domain.model.RepackStepStatus
@@ -74,8 +75,14 @@ class RepackWorker @AssistedInject constructor(
                 success = false,
                 outputApkPath = null,
                 message = throwable.message ?: "重打包失败",
+                detail = throwable.stackTraceToString(),
             )
-            Result.failure()
+            Result.failure(
+                workDataOf(
+                    KEY_ERROR_MESSAGE to (throwable.message ?: "重打包失败"),
+                    KEY_ERROR_DETAIL to throwable.stackTraceToString(),
+                ),
+            )
         }
     }
 
@@ -160,6 +167,7 @@ class RepackWorker @AssistedInject constructor(
             success: Boolean,
             outputApkPath: String?,
             message: String,
+            detail: String? = null,
         ) {
             if (isStaleSession()) return
             val stepId = if (success) STEP_FINISH_SUCCESS else STEP_FINISH_FAILED
@@ -174,6 +182,7 @@ class RepackWorker @AssistedInject constructor(
                     } else {
                         RepackTerminalOutcome.Failure
                     },
+                    detail = detail,
                 ),
             )
             progressController.updateStep(
@@ -205,6 +214,8 @@ class RepackWorker @AssistedInject constructor(
         const val WORK_TAG = "no_env_repack"
         const val KEY_PACKAGE_NAME = "package_name"
         const val KEY_APP_NAME = "app_name"
+        const val KEY_ERROR_MESSAGE = "error_message"
+        const val KEY_ERROR_DETAIL = "error_detail"
         const val STEP_QUEUE = "queue"
         const val STEP_FINISH_SUCCESS = "finish_success"
         const val STEP_FINISH_FAILED = "finish_failed"

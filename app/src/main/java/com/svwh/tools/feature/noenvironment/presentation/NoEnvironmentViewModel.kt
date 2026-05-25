@@ -4,8 +4,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.svwh.tools.core.hook.HookEnvironmentType
 import com.svwh.tools.core.hook.HookStateRepository
+import com.svwh.tools.constant.ApkConstant
 import com.svwh.tools.feature.environment.domain.model.InstalledAppItem
 import com.svwh.tools.feature.environment.domain.repository.InstalledAppRepository
+import com.svwh.tools.feature.environment.domain.repository.InstalledAppMetaDataFilter
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
@@ -91,6 +93,10 @@ class NoEnvironmentViewModel @Inject constructor(
                 val loadedApps = installedAppRepository.getInstalledApps(
                     showSystemApps = false,
                     hookedPackages = emptySet(),
+                    requiredMetaData = InstalledAppMetaDataFilter(
+                        name = ApkConstant.NO_ENV_METADATA_NAME,
+                        value = ApkConstant.NO_ENV_METADATA_VALUE,
+                    ),
                 )
                 val enabledPackages = hookStateRepository.syncAndGetEnabledPackages(
                     environmentType = HookEnvironmentType.NoEnv,
