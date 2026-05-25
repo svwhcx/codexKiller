@@ -103,10 +103,6 @@ public class HookRegistrar {
             case HookConfigTypeEnum.SCREEN:
                 registerSingleton(type, ScreenHook::hook);
                 break;
-            case HookConfigTypeEnum.INTERRUPT_QUIT:
-            case HookConfigTypeEnum.QUIT:
-                runtimeLogger.info("当前 Hook 类型暂未实现：" + type);
-                break;
             default:
                 runtimeLogger.warn("未知 Hook 类型，已跳过：" + type);
                 break;
