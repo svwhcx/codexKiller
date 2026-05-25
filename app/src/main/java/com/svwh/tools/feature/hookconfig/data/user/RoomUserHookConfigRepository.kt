@@ -39,6 +39,7 @@ class RoomUserHookConfigRepository @Inject constructor(
                         className = relation.config.className,
                         methodName = relation.config.methodName,
                         params = relation.config.params,
+                        type = relation.config.type,
                         enabled = relation.config.enabled,
                         isLog = relation.config.isLog,
                         isInterrupted = relation.config.isInterrupted,

@@ -19,7 +19,7 @@ class NoEnvHookConfigExporter @Inject constructor(
         envType: String,
         packageName: String,
     ) = withContext(Dispatchers.IO) {
-        if (packageName.isBlank() || envType != NO_ENV_STORAGE_VALUE) return@withContext
+        if (packageName.isBlank() || !envType.isRuntimeSupported()) return@withContext
         val configs = userHookConfigDao.getConfigsWithRules(
             packageName = packageName,
             envType = envType,
@@ -182,6 +182,10 @@ class NoEnvHookConfigExporter @Inject constructor(
         return if (this == NO_ENV_STORAGE_VALUE) 0 else 1
     }
 
+    private fun String.isRuntimeSupported(): Boolean {
+        return this == NO_ENV_STORAGE_VALUE || this == WITH_ENV_STORAGE_VALUE
+    }
+
     private fun String.toRuntimeType(): Int {
         return trim().toIntOrNull() ?: 0
     }
@@ -190,6 +194,7 @@ class NoEnvHookConfigExporter @Inject constructor(
 
     private companion object {
         const val NO_ENV_STORAGE_VALUE = "no_env"
+        const val WITH_ENV_STORAGE_VALUE = "with_env"
         const val RUNTIME_DATABASE_NAME = "killer_hook.db"
         const val APP_HOOK_TABLE = "app_hook_config"
         const val CHANGE_VALUE_TABLE = "change_value_config"

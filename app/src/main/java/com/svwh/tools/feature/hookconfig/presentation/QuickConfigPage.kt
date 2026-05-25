@@ -25,6 +25,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -37,13 +39,27 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.svwh.tools.feature.environment.presentation.HookSwitch
 
 private val KeywordChipBackground = Color(0xFFF1F4FA)
 
 @Composable
-internal fun QuickConfigPage() {
+internal fun QuickConfigPage(
+    envType: String,
+    packageName: String,
+    viewModel: QuickConfigViewModel = hiltViewModel(),
+) {
     val groups = remember { defaultQuickConfigGroups() }
+    val uiState by viewModel.uiState.collectAsState()
+
+    LaunchedEffect(envType, packageName) {
+        viewModel.initialize(
+            envType = envType,
+            packageName = packageName,
+            groups = groups,
+        )
+    }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -51,13 +67,21 @@ internal fun QuickConfigPage() {
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         items(groups, key = { it.id }) { group ->
-            QuickConfigGroupCard(group = group)
+            QuickConfigGroupCard(
+                group = group,
+                uiState = uiState,
+                onCheckedChange = viewModel::updateQuickConfig,
+            )
         }
     }
 }
 
 @Composable
-private fun QuickConfigGroupCard(group: HookQuickConfigGroup) {
+private fun QuickConfigGroupCard(
+    group: HookQuickConfigGroup,
+    uiState: QuickConfigUiState,
+    onCheckedChange: (HookQuickConfigItem, Boolean) -> Unit,
+) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(14.dp),
@@ -76,7 +100,16 @@ private fun QuickConfigGroupCard(group: HookQuickConfigGroup) {
                         color = HookConfigDivider,
                     )
                 }
-                QuickConfigItemRow(item = item)
+                QuickConfigItemRow(
+                    item = item,
+                    checked = if (item.runtimeHookType != null) {
+                        item.id in uiState.enabledItems
+                    } else {
+                        item.enabledByDefault
+                    },
+                    enabled = item.id !in uiState.loadingItems,
+                    onCheckedChange = onCheckedChange,
+                )
             }
         }
     }
@@ -123,15 +156,29 @@ private fun QuickConfigGroupHeader(group: HookQuickConfigGroup) {
 }
 
 @Composable
-private fun QuickConfigItemRow(item: HookQuickConfigItem) {
-    var checked by rememberSaveable(item.id) { mutableStateOf(item.enabledByDefault) }
+private fun QuickConfigItemRow(
+    item: HookQuickConfigItem,
+    checked: Boolean,
+    enabled: Boolean,
+    onCheckedChange: (HookQuickConfigItem, Boolean) -> Unit,
+) {
     val hasDetails = item.summaryValues.isNotEmpty() || item.detailHint != null
+    val isRuntimeBacked = item.runtimeHookType != null
+    var localChecked by rememberSaveable(item.id) { mutableStateOf(checked) }
+    val displayedChecked = if (isRuntimeBacked) checked else localChecked
+    val updateChecked: (Boolean) -> Unit = { next ->
+        if (isRuntimeBacked) {
+            onCheckedChange(item, next)
+        } else {
+            localChecked = next
+        }
+    }
 
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(enabled = hasDetails) {
-                checked = true
+            .clickable(enabled = hasDetails && enabled) {
+                updateChecked(true)
             }
             .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(7.dp),
@@ -169,8 +216,12 @@ private fun QuickConfigItemRow(item: HookQuickConfigItem) {
                 Spacer(modifier = Modifier.width(4.dp))
             }
             HookSwitch(
-                checked = checked,
-                onCheckedChange = { checked = it },
+                checked = displayedChecked,
+                onCheckedChange = {
+                    if (enabled) {
+                        updateChecked(it)
+                    }
+                },
             )
         }
 

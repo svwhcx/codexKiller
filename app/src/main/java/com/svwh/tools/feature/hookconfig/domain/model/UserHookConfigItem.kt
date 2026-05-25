@@ -8,6 +8,7 @@ data class UserHookConfigItem(
     val className: String,
     val methodName: String,
     val params: String,
+    val type: String,
     val enabled: Boolean,
     val isLog: Boolean,
     val isInterrupted: Boolean,

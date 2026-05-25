@@ -105,7 +105,10 @@ fun HookConfigRoute(
                 beyondViewportPageCount = 1,
             ) { page ->
                 when (tabs[page]) {
-                    HookConfigTab.Quick -> QuickConfigPage()
+                    HookConfigTab.Quick -> QuickConfigPage(
+                        envType = envType,
+                        packageName = packageName,
+                    )
                     HookConfigTab.User -> UserHookConfigPage(
                         envType = envType,
                         packageName = packageName,

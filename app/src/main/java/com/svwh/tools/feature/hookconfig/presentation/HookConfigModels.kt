@@ -32,6 +32,7 @@ internal data class HookQuickConfigItem(
     val enabledByDefault: Boolean = false,
     val detailHint: String? = null,
     val summaryValues: List<String> = emptyList(),
+    val runtimeHookType: String? = null,
 )
 
 internal fun defaultQuickConfigGroups(): List<HookQuickConfigGroup> {
@@ -42,7 +43,13 @@ internal fun defaultQuickConfigGroups(): List<HookQuickConfigGroup> {
             description = "配置与算法相关的 Hook 选项",
             icon = Icons.Outlined.BarChart,
             items = listOf(
-                HookQuickConfigItem("digest", "摘要算法", "MD5, SHA...", enabledByDefault = true),
+                HookQuickConfigItem(
+                    "digest",
+                    "摘要算法",
+                    "MD5, SHA...",
+                    enabledByDefault = true,
+                    runtimeHookType = "34",
+                ),
                 HookQuickConfigItem("cipher", "加解密算法", "AES, DES, RSA...", enabledByDefault = true),
                 HookQuickConfigItem("random", "随机数监听", "SecureRandom, UUID..."),
                 HookQuickConfigItem("base64", "Base64 编解码监听"),
