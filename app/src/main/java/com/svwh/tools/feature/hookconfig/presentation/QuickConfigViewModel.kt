@@ -147,8 +147,16 @@ internal class QuickConfigViewModel @Inject constructor(
                 methodName = "digest",
                 params = "*",
             )
+            private val cipher = QuickHookTypeMapping(
+                itemId = "cipher",
+                type = "35",
+                configName = "加解密算法",
+                className = "javax.crypto.Cipher",
+                methodName = "doFinal",
+                params = "*",
+            )
 
-            fun all(): List<QuickHookTypeMapping> = listOf(digest)
+            fun all(): List<QuickHookTypeMapping> = listOf(digest, cipher)
 
             fun fromItemId(itemId: String): QuickHookTypeMapping? {
                 return all().firstOrNull { it.itemId == itemId }

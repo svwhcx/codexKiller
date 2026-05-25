@@ -30,6 +30,8 @@ public interface HookConfigTypeEnum {
 
     int DIGEST = 34;
 
+    int CIPHER = 35;
+
     static boolean requiresTarget(int type) {
         switch (type) {
             case ASSETS:
@@ -39,6 +41,7 @@ public interface HookConfigTypeEnum {
             case SIGNATURE:
             case SCREEN:
             case DIGEST:
+            case CIPHER:
                 return false;
             default:
                 return true;
