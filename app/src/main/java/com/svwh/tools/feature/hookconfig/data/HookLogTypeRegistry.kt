@@ -24,6 +24,7 @@ class HookLogTypeRegistry @Inject constructor() {
         HookLogTypeOption(33, "SP 写入"),
         HookLogTypeOption(34, "摘要算法"),
         HookLogTypeOption(35, "加解密算法"),
+        HookLogTypeOption(36, "用户证书信任"),
     )
 
     fun options(): List<HookLogTypeOption> = types

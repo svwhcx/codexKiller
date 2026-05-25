@@ -5,6 +5,7 @@ import com.svwh.noenvhook.core.StartActivityLogHookInvocation;
 import com.svwh.noenvhook.core.custom.ArrounHookInvocation;
 import com.svwh.noenvhook.core.crypto.CipherHookInvocation;
 import com.svwh.noenvhook.core.crypto.DigestHookInvocation;
+import com.svwh.noenvhook.core.crypto.UserCertificateTrustHookInvocation;
 import com.svwh.noenvhook.core.file.AssetsHook;
 import com.svwh.noenvhook.core.file.FileDeleteHookInvocation;
 import com.svwh.noenvhook.core.file.FileReadHookInvocation;
@@ -120,6 +121,9 @@ public class HookRegistrar {
                 break;
             case HookConfigTypeEnum.CIPHER:
                 registerSingleton(type, () -> CipherHookInvocation.hook(hookFramework, logWriter, stackTraceCollector));
+                break;
+            case HookConfigTypeEnum.USER_CERT_TRUST:
+                registerSingleton(type, () -> UserCertificateTrustHookInvocation.hook(hookFramework, logWriter, stackTraceCollector));
                 break;
             default:
                 runtimeLogger.warn("未知 Hook 类型，已跳过：" + type);

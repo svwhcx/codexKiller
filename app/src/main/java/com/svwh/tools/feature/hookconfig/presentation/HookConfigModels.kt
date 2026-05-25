@@ -67,6 +67,13 @@ internal fun defaultQuickConfigGroups(): List<HookQuickConfigGroup> {
             description = "配置网络相关的 Hook 选项",
             icon = Icons.Outlined.Language,
             items = listOf(
+                HookQuickConfigItem(
+                    "trust_user_cert",
+                    "信任用户证书",
+                    "HTTPS 抓包证书",
+                    enabledByDefault = true,
+                    runtimeHookType = "36",
+                ),
                 HookQuickConfigItem("hide_wifi_proxy", "隐藏 Wifi 代理", enabledByDefault = true),
                 HookQuickConfigItem("hide_vpn", "隐藏 VPN", enabledByDefault = true),
                 HookQuickConfigItem("dns_lookup", "DNS 查询监听"),

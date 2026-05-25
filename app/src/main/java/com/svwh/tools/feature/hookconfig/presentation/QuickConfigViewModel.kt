@@ -155,8 +155,16 @@ internal class QuickConfigViewModel @Inject constructor(
                 methodName = "doFinal",
                 params = "*",
             )
+            private val userCertTrust = QuickHookTypeMapping(
+                itemId = "trust_user_cert",
+                type = "36",
+                configName = "信任用户证书",
+                className = "javax.net.ssl.SSLContext",
+                methodName = "init",
+                params = "*",
+            )
 
-            fun all(): List<QuickHookTypeMapping> = listOf(digest, cipher)
+            fun all(): List<QuickHookTypeMapping> = listOf(digest, cipher, userCertTrust)
 
             fun fromItemId(itemId: String): QuickHookTypeMapping? {
                 return all().firstOrNull { it.itemId == itemId }
