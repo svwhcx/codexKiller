@@ -8,6 +8,7 @@ import android.widget.TextView;
 
 import com.svwh.noenvhook.conf.HookConfig;
 import com.svwh.noenvhook.core.LogInvocation;
+import com.svwh.noenvhook.framework.HookCallFrame;
 import com.svwh.noenvhook.log.HookLogWriter;
 import com.svwh.noenvhook.log.Log;
 import com.svwh.noenvhook.log.StackTraceCollector;
@@ -17,7 +18,6 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-import top.canyie.pine.Pine;
 
 public class DialogHookInvocation extends LogInvocation {
 
@@ -30,11 +30,11 @@ public class DialogHookInvocation extends LogInvocation {
     }
 
     @Override
-    public Object replaceMethodHook(Pine.CallFrame callFrame) {
+    public Object replaceMethodHook(HookCallFrame callFrame) {
         Object resVal = null;
         try {
-            resVal = callFrame.invokeOriginalMethod();
-        } catch (Exception e) {
+            resVal = callFrame.invokeOriginal();
+        } catch (Throwable e) {
             android.util.Log.e("Killer_Hook", "出现了错误");
         }
         Log log = new Log();
@@ -42,8 +42,8 @@ public class DialogHookInvocation extends LogInvocation {
         log.setTitle(hookConfig.getConfigName());
         log.setTime(LocalDateTime.now().format(dataTimeFormatter));
         StringBuilder contentBuilder = new StringBuilder();
-        contentBuilder.append("类名：").append(callFrame.thisObject.getClass().getCanonicalName()).append("\n\n");
-        Dialog dialog = (Dialog) callFrame.thisObject;
+        contentBuilder.append("类名：").append(callFrame.getThisObject().getClass().getCanonicalName()).append("\n\n");
+        Dialog dialog = (Dialog) callFrame.getThisObject();
         dialog.setCanceledOnTouchOutside(true);
         dialog.setCancelable(true);
         Window window = dialog.getWindow();

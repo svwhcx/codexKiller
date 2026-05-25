@@ -1,7 +1,6 @@
 package com.svwh.noenvhook.management;
 
 import com.svwh.noenvhook.conf.HookConfig;
-import com.svwh.noenvhook.core.InterceptorInvocationAdapter;
 import com.svwh.noenvhook.core.StartActivityLogHookInvocation;
 import com.svwh.noenvhook.core.custom.ArrounHookInvocation;
 import com.svwh.noenvhook.core.file.AssetsHook;
@@ -15,6 +14,8 @@ import com.svwh.noenvhook.core.ui.OnClickLogHookInvocation;
 import com.svwh.noenvhook.core.ui.TextSetHookInvocation;
 import com.svwh.noenvhook.core.ui.ToastShowHookInvocation;
 import com.svwh.noenvhook.core.web.VpnHookInvocation;
+import com.svwh.noenvhook.framework.HookFramework;
+import com.svwh.noenvhook.framework.pine.PineHookFramework;
 import com.svwh.noenvhook.log.HookLogWriter;
 import com.svwh.noenvhook.log.StackTraceCollector;
 import com.svwh.noenvhook.runtime.RuntimeLogger;
@@ -23,13 +24,12 @@ import java.lang.reflect.Member;
 import java.util.HashSet;
 import java.util.Set;
 
-import top.canyie.pine.Pine;
-
 public class HookRegistrar {
 
     private final HookLogWriter logWriter;
     private final StackTraceCollector stackTraceCollector;
     private final RuntimeLogger runtimeLogger;
+    private final HookFramework hookFramework;
     private final Set<Integer> singletonHooks = new HashSet<>();
 
     public HookRegistrar(
@@ -37,9 +37,19 @@ public class HookRegistrar {
             StackTraceCollector stackTraceCollector,
             RuntimeLogger runtimeLogger
     ) {
+        this(logWriter, stackTraceCollector, runtimeLogger, new PineHookFramework());
+    }
+
+    public HookRegistrar(
+            HookLogWriter logWriter,
+            StackTraceCollector stackTraceCollector,
+            RuntimeLogger runtimeLogger,
+            HookFramework hookFramework
+    ) {
         this.logWriter = logWriter;
         this.stackTraceCollector = stackTraceCollector;
         this.runtimeLogger = runtimeLogger;
+        this.hookFramework = hookFramework;
     }
 
     public void register(ClassLoader classLoader, Member target, HookConfig hookConfig) throws Exception {
@@ -51,57 +61,57 @@ public class HookRegistrar {
 
         switch (type) {
             case HookConfigTypeEnum.CUSTOMER:
-                Pine.hook(target, new InterceptorInvocationAdapter(
+                hookFramework.hookReplacement(target,
                         new ArrounHookInvocation(hookConfig, logWriter, stackTraceCollector)
-                ));
+                );
                 break;
             case HookConfigTypeEnum.CLICK:
-                Pine.hook(target, new InterceptorInvocationAdapter(
+                hookFramework.hookReplacement(target,
                         new OnClickLogHookInvocation(hookConfig, logWriter, stackTraceCollector)
-                ));
+                );
                 break;
             case HookConfigTypeEnum.DIALOG:
-                Pine.hook(target, new InterceptorInvocationAdapter(
+                hookFramework.hookReplacement(target,
                         new DialogHookInvocation(hookConfig, logWriter, stackTraceCollector)
-                ));
+                );
                 break;
             case HookConfigTypeEnum.TEXT_SET:
-                Pine.hook(target, new InterceptorInvocationAdapter(
+                hookFramework.hookReplacement(target,
                         new TextSetHookInvocation(hookConfig, logWriter, stackTraceCollector)
-                ));
+                );
                 break;
             case HookConfigTypeEnum.TOAST_SHOW:
-                Pine.hook(target, new InterceptorInvocationAdapter(
+                hookFramework.hookReplacement(target,
                         new ToastShowHookInvocation(hookConfig, logWriter, stackTraceCollector)
-                ));
+                );
                 break;
             case HookConfigTypeEnum.ACTIVITY_LOG:
-                Pine.hook(target, new InterceptorInvocationAdapter(
+                hookFramework.hookReplacement(target,
                         new StartActivityLogHookInvocation(hookConfig, logWriter, stackTraceCollector)
-                ));
+                );
                 break;
             case HookConfigTypeEnum.VPN:
-                Pine.hook(target, new InterceptorInvocationAdapter(
+                hookFramework.hookReplacement(target,
                         new VpnHookInvocation(hookConfig, logWriter, stackTraceCollector)
-                ));
+                );
                 break;
             case HookConfigTypeEnum.ASSETS:
-                registerSingleton(type, () -> AssetsHook.hook(logWriter));
+                registerSingleton(type, () -> AssetsHook.hook(hookFramework, logWriter));
                 break;
             case HookConfigTypeEnum.FILE_READ:
-                registerSingleton(type, () -> FileReadHookInvocation.hook(logWriter));
+                registerSingleton(type, () -> FileReadHookInvocation.hook(hookFramework, logWriter));
                 break;
             case HookConfigTypeEnum.FILE_WRITE:
-                registerSingleton(type, () -> FileWriteHookInvocation.hook(logWriter));
+                registerSingleton(type, () -> FileWriteHookInvocation.hook(hookFramework, logWriter));
                 break;
             case HookConfigTypeEnum.FILE_DELETE:
-                registerSingleton(type, () -> FileDeleteHookInvocation.hook(logWriter));
+                registerSingleton(type, () -> FileDeleteHookInvocation.hook(hookFramework, logWriter));
                 break;
             case HookConfigTypeEnum.SIGNATURE:
-                registerSingleton(type, () -> SignatureHookInvocation.hook(classLoader, logWriter));
+                registerSingleton(type, () -> SignatureHookInvocation.hook(hookFramework, classLoader, logWriter));
                 break;
             case HookConfigTypeEnum.SCREEN:
-                registerSingleton(type, ScreenHook::hook);
+                registerSingleton(type, () -> ScreenHook.hook(hookFramework));
                 break;
             default:
                 runtimeLogger.warn("未知 Hook 类型，已跳过：" + type);

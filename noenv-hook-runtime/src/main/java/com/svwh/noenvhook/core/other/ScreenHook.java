@@ -2,10 +2,11 @@ package com.svwh.noenvhook.core.other;
 
 import android.view.Window;
 
-import java.lang.reflect.Member;
+import com.svwh.noenvhook.framework.HookCallFrame;
+import com.svwh.noenvhook.framework.HookCallback;
+import com.svwh.noenvhook.framework.HookFramework;
 
-import top.canyie.pine.Pine;
-import top.canyie.pine.callback.MethodHook;
+import java.lang.reflect.Member;
 
 /**
  * @description
@@ -14,18 +15,17 @@ import top.canyie.pine.callback.MethodHook;
  */
 public class ScreenHook {
 
-    public static void hook() throws Exception {
+    public static void hook(HookFramework hookFramework) throws Exception {
         Member member = Window.class.getDeclaredMethod("setFlags", int.class, int.class);
 
-        Pine.hook(
+        hookFramework.hook(
                 member,
-                new MethodHook() {
+                new HookCallback() {
                     @Override
-                    public void beforeCall(Pine.CallFrame callFrame) throws Throwable {
-                        super.beforeCall(callFrame);
-                        int flag = (int) callFrame.args[0];
+                    public void beforeCall(HookCallFrame callFrame) {
+                        int flag = (int) callFrame.getArg(0);
                         int setFlag = flag & (-8193);
-                        callFrame.args[0] = setFlag;
+                        callFrame.setArg(0, setFlag);
                     }
                 }
         );

@@ -5,6 +5,9 @@ import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.util.Base64;
 
+import com.svwh.noenvhook.framework.HookCallFrame;
+import com.svwh.noenvhook.framework.HookCallback;
+import com.svwh.noenvhook.framework.HookFramework;
 import com.svwh.noenvhook.log.HookLogWriter;
 import com.svwh.noenvhook.log.Log;
 import com.svwh.noenvhook.management.HookConfigTypeEnum;
@@ -16,21 +19,17 @@ import java.security.MessageDigest;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 
-import top.canyie.pine.Pine;
-import top.canyie.pine.callback.MethodHook;
-
 public class SignatureHookInvocation {
 
-    public static void hook(ClassLoader classLoader, HookLogWriter logWriter) throws Exception {
+    public static void hook(HookFramework hookFramework, ClassLoader classLoader, HookLogWriter logWriter) throws Exception {
         @SuppressLint("PrivateApi")
         Method member = classLoader.loadClass("android.app.ApplicationPackageManager")
                 .getDeclaredMethod("getPackageInfo", String.class, int.class);
-        Pine.hook(member, new MethodHook() {
+        hookFramework.hook(member, new HookCallback() {
             @Override
-            public void afterCall(Pine.CallFrame callFrame) throws Throwable {
-                super.afterCall(callFrame);
+            public void afterCall(HookCallFrame callFrame) throws Throwable {
                 PackageInfo packageInfo = (PackageInfo) callFrame.getResult();
-                int value = (int) callFrame.args[1];
+                int value = (int) callFrame.getArg(1);
                 if (packageInfo == null || packageInfo.signatures == null || packageInfo.signatures.length == 0) {
                     return;
                 }

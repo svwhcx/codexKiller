@@ -7,13 +7,13 @@ import android.widget.TextView;
 
 import com.svwh.noenvhook.conf.HookConfig;
 import com.svwh.noenvhook.core.LogInvocation;
+import com.svwh.noenvhook.framework.HookCallFrame;
 import com.svwh.noenvhook.log.HookLogWriter;
 import com.svwh.noenvhook.log.StackTraceCollector;
 import com.svwh.noenvhook.management.HookConfigTypeEnum;
 
 import java.time.LocalDateTime;
 
-import top.canyie.pine.Pine;
 
 public class OnClickLogHookInvocation extends LogInvocation {
 
@@ -26,12 +26,12 @@ public class OnClickLogHookInvocation extends LogInvocation {
     }
 
     @Override
-    public Object replaceMethodHook(Pine.CallFrame callFrame) {
-        View.OnClickListener clickListener = (View.OnClickListener) callFrame.args[0];
-        callFrame.args[0] = buildLogClickListener(clickListener);
+    public Object replaceMethodHook(HookCallFrame callFrame) {
+        View.OnClickListener clickListener = (View.OnClickListener) callFrame.getArg(0);
+        callFrame.setArg(0, buildLogClickListener(clickListener));
         try {
-            return callFrame.invokeOriginalMethod();
-        } catch (Exception e) {
+            return callFrame.invokeOriginal();
+        } catch (Throwable e) {
             throw new RuntimeException(e);
         }
     }

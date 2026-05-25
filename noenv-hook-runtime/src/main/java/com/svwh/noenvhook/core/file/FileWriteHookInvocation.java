@@ -2,30 +2,29 @@ package com.svwh.noenvhook.core.file;
 
 import com.svwh.noenvhook.log.HookLogWriter;
 import com.svwh.noenvhook.log.Log;
+import com.svwh.noenvhook.framework.HookCallFrame;
+import com.svwh.noenvhook.framework.HookCallback;
+import com.svwh.noenvhook.framework.HookFramework;
+import com.svwh.noenvhook.framework.ReflectionUtils;
 import com.svwh.noenvhook.management.HookConfigTypeEnum;
 
 import java.io.FileOutputStream;
 import java.lang.reflect.Field;
 import java.lang.reflect.Member;
 
-import top.canyie.pine.Pine;
-import top.canyie.pine.callback.MethodHook;
-import top.canyie.pine.utils.ReflectionHelper;
-
 public class FileWriteHookInvocation {
 
-    public static void hook(HookLogWriter logWriter) throws NoSuchMethodException {
+    public static void hook(HookFramework hookFramework, HookLogWriter logWriter) throws NoSuchMethodException {
         Member member = FileOutputStream.class.getDeclaredMethod("write", byte[].class, int.class, int.class);
-        Pine.hook(member, new MethodHook() {
+        hookFramework.hook(member, new HookCallback() {
             @Override
-            public void afterCall(Pine.CallFrame callFrame) throws Throwable {
-                super.afterCall(callFrame);
-                Field field = ReflectionHelper.findField(FileOutputStream.class, "path");
-                String path = (String) field.get(callFrame.thisObject);
+            public void afterCall(HookCallFrame callFrame) throws Throwable {
+                Field field = ReflectionUtils.findField(FileOutputStream.class, "path");
+                String path = (String) field.get(callFrame.getThisObject());
                 if (path != null) {
-                    byte[] b = (byte[]) callFrame.args[0];
-                    int off = (int) callFrame.args[1];
-                    int len = (int) callFrame.args[2];
+                    byte[] b = (byte[]) callFrame.getArg(0);
+                    int off = (int) callFrame.getArg(1);
+                    int len = (int) callFrame.getArg(2);
 
                     byte[] bytes = new byte[Math.min(len, 2048)];
                     String str;

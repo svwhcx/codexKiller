@@ -2,23 +2,22 @@ package com.svwh.noenvhook.core.file;
 
 import com.svwh.noenvhook.log.HookLogWriter;
 import com.svwh.noenvhook.log.Log;
+import com.svwh.noenvhook.framework.HookCallFrame;
+import com.svwh.noenvhook.framework.HookCallback;
+import com.svwh.noenvhook.framework.HookFramework;
 import com.svwh.noenvhook.management.HookConfigTypeEnum;
 
 import java.io.File;
 import java.lang.reflect.Member;
 
-import top.canyie.pine.Pine;
-import top.canyie.pine.callback.MethodHook;
-
 public class FileDeleteHookInvocation {
 
-    public static void hook(HookLogWriter logWriter) throws NoSuchMethodException {
+    public static void hook(HookFramework hookFramework, HookLogWriter logWriter) throws NoSuchMethodException {
         Member member = File.class.getDeclaredMethod("delete");
-        Pine.hook(member, new MethodHook() {
+        hookFramework.hook(member, new HookCallback() {
             @Override
-            public void beforeCall(Pine.CallFrame callFrame) throws Throwable {
-                super.beforeCall(callFrame);
-                File file = (File) callFrame.thisObject;
+            public void beforeCall(HookCallFrame callFrame) {
+                File file = (File) callFrame.getThisObject();
                 if (file != null) {
                     Log log = new Log();
                     log.setType(HookConfigTypeEnum.FILE_DELETE);

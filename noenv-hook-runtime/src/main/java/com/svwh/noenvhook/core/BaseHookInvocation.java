@@ -1,67 +1,56 @@
 package com.svwh.noenvhook.core;
 
-import android.telecom.Call;
-
 import com.svwh.noenvhook.conf.ChangeConfig;
 import com.svwh.noenvhook.conf.HookConfig;
+import com.svwh.noenvhook.framework.HookCallFrame;
 
-import top.canyie.pine.Pine;
-
-/**
- * @description
- * @Author chenxin
- * @Date 2025/4/26 14:28
- */
-public abstract class BaseHookInvocation implements MethodHookInvocation{
+public abstract class BaseHookInvocation implements MethodHookInvocation {
 
     protected HookConfig hookConfig;
 
-    public BaseHookInvocation(HookConfig hookConfig){
+    public BaseHookInvocation(HookConfig hookConfig) {
         this.hookConfig = hookConfig;
     }
 
-    /**
-     * 修改方法的参数值
-     * TODO 是否记录修改前的和修改后的参数
-     * @param callFrame
-     */
-    protected void changeParam(Pine.CallFrame callFrame){
+    protected void changeParam(HookCallFrame callFrame) {
+        if (hookConfig.getChangeConfigs() == null) {
+            return;
+        }
         for (ChangeConfig changeConfig : hookConfig.getChangeConfigs()) {
-            if (changeConfig.getParamNum() > 0){
-                // 强制类型转换
-                Object cast = callFrame.args[changeConfig.getParamNum()].getClass().cast(changeConfig.getTarget());
-                callFrame.args[changeConfig.getParamNum()] = cast;
+            Integer paramNum = changeConfig.getParamNum();
+            if (paramNum != null && paramNum > 0) {
+                Object current = callFrame.getArg(paramNum);
+                Object value = changeConfig.getTarget();
+                callFrame.setArg(paramNum, current == null || value == null ? value : current.getClass().cast(value));
             }
         }
     }
 
-    protected void changeResult(Pine.CallFrame callFrame){
-
-    }
-
-
-    @Override
-    public void beforeMethodHook(Pine.CallFrame callFrame) {
-
+    protected void changeResult(HookCallFrame callFrame) {
     }
 
     @Override
-    public void afterMethodHook(Pine.CallFrame callFrame) {
-
+    public void beforeMethodHook(HookCallFrame callFrame) {
     }
 
     @Override
-    public void changeStaticField(Pine.CallFrame callFrame) {
-
+    public void afterMethodHook(HookCallFrame callFrame) {
     }
 
     @Override
-    public void changeField(Pine.CallFrame callFrame) {
+    public Object replaceMethodHook(HookCallFrame callFrame) throws Throwable {
+        return callFrame.invokeOriginal();
+    }
 
+    @Override
+    public void changeStaticField(HookCallFrame callFrame) {
+    }
+
+    @Override
+    public void changeField(HookCallFrame callFrame) {
     }
 
     @Override
     public void build() {
-
     }
 }

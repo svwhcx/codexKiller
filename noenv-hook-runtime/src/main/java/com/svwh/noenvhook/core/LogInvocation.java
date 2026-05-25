@@ -1,17 +1,15 @@
 package com.svwh.noenvhook.core;
 
 import com.svwh.noenvhook.conf.HookConfig;
+import com.svwh.noenvhook.framework.HookCallFrame;
 import com.svwh.noenvhook.log.FilteredStackTraceCollector;
 import com.svwh.noenvhook.log.HookLogWriter;
 import com.svwh.noenvhook.log.Log;
 import com.svwh.noenvhook.log.LogService;
 import com.svwh.noenvhook.log.StackTraceCollector;
 
-import java.lang.reflect.Method;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
-
-import top.canyie.pine.Pine;
 
 public class LogInvocation extends BaseHookInvocation {
 
@@ -38,20 +36,21 @@ public class LogInvocation extends BaseHookInvocation {
     }
 
     @Override
-    public Object replaceMethodHook(Pine.CallFrame callFrame) {
+    public Object replaceMethodHook(HookCallFrame callFrame) throws Throwable {
         return null;
     }
 
-    protected void logParams(Pine.CallFrame callFrame, List<String> logString) {
-        for (int i = 0; i < callFrame.args.length; i++) {
-            Object arg = callFrame.args[i];
-            logString.add("参数" + (i + 1) + "：" + (arg == null ? "null" : arg.getClass().getCanonicalName()));
-            logString.add("参数值：" + arg);
+    protected void logParams(HookCallFrame callFrame, List<String> logString) {
+        Object[] args = callFrame.getArgs();
+        for (int i = 0; args != null && i < args.length; i++) {
+            Object arg = args[i];
+            logString.add("param" + (i + 1) + ": " + (arg == null ? "null" : arg.getClass().getCanonicalName()));
+            logString.add("value: " + arg);
         }
     }
 
-    protected void logReturnValue(Pine.CallFrame callFrame, List<String> logString) {
-        logString.add("返回值类型：" + ((Method) callFrame.method).getReturnType().getCanonicalName());
+    protected void logReturnValue(HookCallFrame callFrame, List<String> logString) {
+        logString.add("return type: " + callFrame.getReturnType().getCanonicalName());
     }
 
     protected void logStackElement(Log log) {

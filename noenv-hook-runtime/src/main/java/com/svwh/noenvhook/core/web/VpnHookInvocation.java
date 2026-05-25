@@ -2,10 +2,10 @@ package com.svwh.noenvhook.core.web;
 
 import com.svwh.noenvhook.conf.HookConfig;
 import com.svwh.noenvhook.core.LogInvocation;
+import com.svwh.noenvhook.framework.HookCallFrame;
 import com.svwh.noenvhook.log.HookLogWriter;
 import com.svwh.noenvhook.log.StackTraceCollector;
 
-import top.canyie.pine.Pine;
 
 public class VpnHookInvocation extends LogInvocation {
 
@@ -18,16 +18,16 @@ public class VpnHookInvocation extends LogInvocation {
     }
 
     @Override
-    public Object replaceMethodHook(Pine.CallFrame callFrame) {
+    public Object replaceMethodHook(HookCallFrame callFrame) {
         try {
-            Object result = callFrame.invokeOriginalMethod();
-            String name = (String) callFrame.args[0];
+            Object result = callFrame.invokeOriginal();
+            String name = (String) callFrame.getArg(0);
             if (name.startsWith("tun") || name.startsWith("ppp")
                     || name.startsWith("tap") || name.startsWith("vpn")) {
                 return null;
             }
             return result;
-        } catch (Exception e) {
+        } catch (Throwable e) {
             return null;
         }
     }

@@ -5,6 +5,7 @@ import android.content.Context;
 import com.svwh.noenvhook.conf.HookConfig;
 import com.svwh.noenvhook.config.DBHookConfigService;
 import com.svwh.noenvhook.config.IHookConfigService;
+import com.svwh.noenvhook.framework.HookFramework;
 import com.svwh.noenvhook.log.FilteredStackTraceCollector;
 import com.svwh.noenvhook.log.LogService;
 import com.svwh.noenvhook.management.HookManager;
@@ -21,6 +22,19 @@ public final class HookRuntime {
         this(
                 new DBHookConfigService(),
                 new HookManager(LogService.getInstance(), new AndroidRuntimeLogger(), new FilteredStackTraceCollector()),
+                new AndroidRuntimeLogger()
+        );
+    }
+
+    public HookRuntime(HookFramework hookFramework) {
+        this(
+                new DBHookConfigService(),
+                new HookManager(
+                        LogService.getInstance(),
+                        new AndroidRuntimeLogger(),
+                        new FilteredStackTraceCollector(),
+                        hookFramework
+                ),
                 new AndroidRuntimeLogger()
         );
     }
