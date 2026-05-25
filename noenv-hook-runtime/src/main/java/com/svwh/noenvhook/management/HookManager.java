@@ -2,6 +2,8 @@ package com.svwh.noenvhook.management;
 
 import com.svwh.noenvhook.conf.HookConfig;
 import com.svwh.noenvhook.framework.HookFramework;
+import com.svwh.noenvhook.framework.HookEnvironment;
+import com.svwh.noenvhook.framework.pine.PineHookFramework;
 import com.svwh.noenvhook.log.FilteredStackTraceCollector;
 import com.svwh.noenvhook.log.HookLogWriter;
 import com.svwh.noenvhook.log.LogService;
@@ -36,10 +38,10 @@ public class HookManager {
             StackTraceCollector stackTraceCollector,
             HookFramework hookFramework
     ) {
-        this.targetResolver = new HookTargetResolver();
-        this.hookRegistrar = hookFramework == null
-                ? new HookRegistrar(logWriter, stackTraceCollector, runtimeLogger)
-                : new HookRegistrar(logWriter, stackTraceCollector, runtimeLogger, hookFramework);
+        HookFramework resolvedFramework = hookFramework == null ? new PineHookFramework() : hookFramework;
+        HookEnvironment.install(resolvedFramework);
+        this.targetResolver = new HookTargetResolver(resolvedFramework.helpers());
+        this.hookRegistrar = new HookRegistrar(logWriter, stackTraceCollector, runtimeLogger, resolvedFramework);
         this.failureReporter = new HookRegistrationFailureReporter(logWriter, runtimeLogger);
     }
 

@@ -1,6 +1,7 @@
 package com.svwh.noenvhook.management;
 
 import com.svwh.noenvhook.conf.HookConfig;
+import com.svwh.noenvhook.framework.HookHelpers;
 
 import java.lang.reflect.Member;
 import java.lang.reflect.Method;
@@ -10,8 +11,14 @@ import java.util.List;
 
 public class HookTargetResolver {
 
+    private final HookHelpers helpers;
+
+    public HookTargetResolver(HookHelpers helpers) {
+        this.helpers = helpers;
+    }
+
     public List<Member> resolve(ClassLoader classLoader, HookConfig hookConfig) throws Exception {
-        Class<?> targetClass = classLoader.loadClass(hookConfig.getClassName());
+        Class<?> targetClass = helpers.findClass(hookConfig.getClassName(), classLoader);
         if ("*".equals(hookConfig.getParams())) {
             return resolveWildcardMethods(targetClass, hookConfig.getMethodName());
         }
@@ -21,7 +28,7 @@ public class HookTargetResolver {
         for (int i = 0; i < paramSignature.size(); i++) {
             parameterTypes[i] = getParamClass(classLoader, paramSignature.get(i));
         }
-        return Collections.singletonList(targetClass.getDeclaredMethod(hookConfig.getMethodName(), parameterTypes));
+        return Collections.singletonList(helpers.findMethodExact(targetClass, hookConfig.getMethodName(), parameterTypes));
     }
 
     private List<Member> resolveWildcardMethods(Class<?> targetClass, String methodName) {
@@ -53,7 +60,7 @@ public class HookTargetResolver {
     private Class<?> getParamClass(ClassLoader classLoader, String typeName) throws ClassNotFoundException {
         String normalized = normalizeTypeName(typeName);
         if (normalized.startsWith("[")) {
-            return Class.forName(normalized.replace('/', '.'), false, classLoader);
+            return helpers.findClass(normalized.replace('/', '.'), classLoader);
         }
 
         switch (normalized) {
@@ -88,7 +95,7 @@ public class HookTargetResolver {
             case "java.lang.String":
                 return String.class;
             default:
-                return classLoader.loadClass(normalized);
+                return helpers.findClass(normalized, classLoader);
         }
     }
 
