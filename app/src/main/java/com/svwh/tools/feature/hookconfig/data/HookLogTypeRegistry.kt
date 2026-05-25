@@ -22,6 +22,7 @@ class HookLogTypeRegistry @Inject constructor() {
         HookLogTypeOption(31, "Assets 读取"),
         HookLogTypeOption(32, "SP 读取"),
         HookLogTypeOption(33, "SP 写入"),
+        HookLogTypeOption(34, "摘要算法"),
     )
 
     fun options(): List<HookLogTypeOption> = types

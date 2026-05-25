@@ -60,6 +60,11 @@ public class HookManager {
         }
 
         try {
+            Integer type = hookConfig.getType();
+            if (type != null && !HookConfigTypeEnum.requiresTarget(type)) {
+                hookRegistrar.register(classLoader, null, hookConfig);
+                return;
+            }
             List<Member> targets = targetResolver.resolve(classLoader, hookConfig);
             for (Member target : targets) {
                 hookRegistrar.register(classLoader, target, hookConfig);

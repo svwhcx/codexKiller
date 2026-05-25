@@ -27,4 +27,21 @@ public interface HookConfigTypeEnum {
     int FILE_DELETE = 29;
 
     int ASSETS = 31;
+
+    int DIGEST = 34;
+
+    static boolean requiresTarget(int type) {
+        switch (type) {
+            case ASSETS:
+            case FILE_READ:
+            case FILE_WRITE:
+            case FILE_DELETE:
+            case SIGNATURE:
+            case SCREEN:
+            case DIGEST:
+                return false;
+            default:
+                return true;
+        }
+    }
 }

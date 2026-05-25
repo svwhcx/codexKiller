@@ -3,6 +3,7 @@ package com.svwh.noenvhook.management;
 import com.svwh.noenvhook.conf.HookConfig;
 import com.svwh.noenvhook.core.StartActivityLogHookInvocation;
 import com.svwh.noenvhook.core.custom.ArrounHookInvocation;
+import com.svwh.noenvhook.core.crypto.DigestHookInvocation;
 import com.svwh.noenvhook.core.file.AssetsHook;
 import com.svwh.noenvhook.core.file.FileDeleteHookInvocation;
 import com.svwh.noenvhook.core.file.FileReadHookInvocation;
@@ -112,6 +113,9 @@ public class HookRegistrar {
                 break;
             case HookConfigTypeEnum.SCREEN:
                 registerSingleton(type, () -> ScreenHook.hook(hookFramework));
+                break;
+            case HookConfigTypeEnum.DIGEST:
+                registerSingleton(type, () -> DigestHookInvocation.hook(hookFramework, logWriter, stackTraceCollector));
                 break;
             default:
                 runtimeLogger.warn("未知 Hook 类型，已跳过：" + type);
