@@ -163,8 +163,30 @@ internal class QuickConfigViewModel @Inject constructor(
                 methodName = "init",
                 params = "*",
             )
+            private val hideWifiProxy = QuickHookTypeMapping(
+                itemId = "hide_wifi_proxy",
+                type = "30",
+                configName = "隐藏 Wifi 代理",
+                className = "android.net.Proxy",
+                methodName = "getDefaultHost",
+                params = "*",
+            )
+            private val hideVpn = QuickHookTypeMapping(
+                itemId = "hide_vpn",
+                type = "26",
+                configName = "隐藏 VPN",
+                className = "java.net.NetworkInterface",
+                methodName = "getName",
+                params = "*",
+            )
 
-            fun all(): List<QuickHookTypeMapping> = listOf(digest, cipher, userCertTrust)
+            fun all(): List<QuickHookTypeMapping> = listOf(
+                digest,
+                cipher,
+                userCertTrust,
+                hideWifiProxy,
+                hideVpn,
+            )
 
             fun fromItemId(itemId: String): QuickHookTypeMapping? {
                 return all().firstOrNull { it.itemId == itemId }

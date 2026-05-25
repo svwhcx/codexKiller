@@ -20,6 +20,8 @@ public interface HookConfigTypeEnum {
 
     int VPN = 26;
 
+    int WIFI_PROXY = 30;
+
     int FILE_WRITE = 27;
 
     int FILE_READ = 28;
@@ -40,6 +42,8 @@ public interface HookConfigTypeEnum {
             case FILE_READ:
             case FILE_WRITE:
             case FILE_DELETE:
+            case VPN:
+            case WIFI_PROXY:
             case SIGNATURE:
             case SCREEN:
             case DIGEST:

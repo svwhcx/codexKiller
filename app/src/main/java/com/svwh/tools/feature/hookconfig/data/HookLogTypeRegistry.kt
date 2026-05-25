@@ -19,6 +19,7 @@ class HookLogTypeRegistry @Inject constructor() {
         HookLogTypeOption(27, "文件写入"),
         HookLogTypeOption(28, "文件读取"),
         HookLogTypeOption(29, "文件删除"),
+        HookLogTypeOption(30, "Wifi 代理隐藏"),
         HookLogTypeOption(31, "Assets 读取"),
         HookLogTypeOption(32, "SP 读取"),
         HookLogTypeOption(33, "SP 写入"),

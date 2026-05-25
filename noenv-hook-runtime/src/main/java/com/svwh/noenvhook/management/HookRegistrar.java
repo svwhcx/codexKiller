@@ -17,6 +17,7 @@ import com.svwh.noenvhook.core.ui.OnClickLogHookInvocation;
 import com.svwh.noenvhook.core.ui.TextSetHookInvocation;
 import com.svwh.noenvhook.core.ui.ToastShowHookInvocation;
 import com.svwh.noenvhook.core.web.VpnHookInvocation;
+import com.svwh.noenvhook.core.web.WifiProxyHookInvocation;
 import com.svwh.noenvhook.framework.HookFramework;
 import com.svwh.noenvhook.framework.pine.PineHookFramework;
 import com.svwh.noenvhook.log.HookLogWriter;
@@ -94,9 +95,7 @@ public class HookRegistrar {
                 );
                 break;
             case HookConfigTypeEnum.VPN:
-                hookFramework.hookReplacement(target,
-                        new VpnHookInvocation(hookConfig, logWriter, stackTraceCollector)
-                );
+                registerSingleton(type, () -> VpnHookInvocation.hook(hookFramework, logWriter, stackTraceCollector));
                 break;
             case HookConfigTypeEnum.ASSETS:
                 registerSingleton(type, () -> AssetsHook.hook(hookFramework, logWriter));
@@ -109,6 +108,9 @@ public class HookRegistrar {
                 break;
             case HookConfigTypeEnum.FILE_DELETE:
                 registerSingleton(type, () -> FileDeleteHookInvocation.hook(hookFramework, logWriter));
+                break;
+            case HookConfigTypeEnum.WIFI_PROXY:
+                registerSingleton(type, () -> WifiProxyHookInvocation.hook(hookFramework, logWriter, stackTraceCollector));
                 break;
             case HookConfigTypeEnum.SIGNATURE:
                 registerSingleton(type, () -> SignatureHookInvocation.hook(hookFramework, classLoader, logWriter));
