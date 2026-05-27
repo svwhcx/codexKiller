@@ -119,26 +119,38 @@ private fun NoEnvironmentScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1f)
-                    .padding(horizontal = 16.dp),
+                    .weight(1f),
             ) {
                 NoEnvironmentSearchBar(
                     value = uiState.searchQuery,
                     onValueChange = onSearchQueryChange,
                     onAddClick = onAddClick,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
                 )
 
                 Spacer(modifier = Modifier.height(22.dp))
 
-                AppListHeader(appCount = uiState.filteredApps.size)
+                AppListHeader(
+                    appCount = uiState.filteredApps.size,
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                )
 
                 Spacer(modifier = Modifier.height(12.dp))
 
                 if (uiState.isLoading) {
-                    InlineLoadingRow(modifier = Modifier.fillMaxWidth())
+                    InlineLoadingRow(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
+                    )
                 } else if (uiState.filteredApps.isEmpty()) {
-                    EmptyNoEnvironmentApps(modifier = Modifier.weight(1f))
+                    EmptyNoEnvironmentApps(
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(horizontal = 16.dp),
+                    )
                 } else {
                     NoEnvironmentAppList(
                         apps = uiState.filteredApps,
@@ -168,7 +180,7 @@ private fun NoEnvironmentHero(
             modifier = Modifier
                 .align(Alignment.TopStart)
                 .statusBarsPadding()
-                .padding(start = 16.dp, top = 48.dp),
+                .padding(start = 16.dp, top = 34.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Row(
@@ -297,9 +309,10 @@ private fun NoEnvironmentSearchBar(
 @Composable
 private fun AppListHeader(
     appCount: Int,
+    modifier: Modifier = Modifier,
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         verticalAlignment = Alignment.Bottom,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
@@ -341,7 +354,7 @@ private fun NoEnvironmentAppList(
             )
             if (index != apps.lastIndex) {
                 HorizontalDivider(
-                    modifier = Modifier.padding(start = 52.dp),
+                    modifier = Modifier.padding(start = 68.dp, end = 16.dp),
                     color = DividerColor,
                     thickness = 0.7.dp,
                 )
@@ -360,7 +373,7 @@ private fun NoEnvironmentAppRow(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(vertical = 10.dp),
+            .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         InstalledAppIcon(app = app)
@@ -373,7 +386,6 @@ private fun NoEnvironmentAppRow(
                 text = app.appName,
                 style = MaterialTheme.typography.bodyLarge,
                 color = TitleColor,
-                fontWeight = FontWeight.Bold,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )

@@ -401,7 +401,6 @@ private fun RepackAppRow(
                 text = app.appName,
                 style = MaterialTheme.typography.bodyLarge,
                 color = RepackTitleColor,
-                fontWeight = FontWeight.Bold,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )

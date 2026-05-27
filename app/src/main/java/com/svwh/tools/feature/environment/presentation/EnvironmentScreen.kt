@@ -74,6 +74,7 @@ internal val SwitchThumb = Color(0xFFFFFFFF)
 
 internal val AppListControlHeight = 38.dp
 internal val AppIconSize = 36.dp
+internal val AppIconCornerRadius = 8.dp
 internal val AppRowHorizontalPadding = 8.dp
 internal val AppRowVerticalPadding = 6.dp
 internal val AppListItemSpacing = 6.dp
@@ -418,7 +419,6 @@ private fun EnvironmentAppRow(
                 text = app.appName,
                 style = MaterialTheme.typography.bodyLarge,
                 color = EnvironmentTitleColor,
-                fontWeight = FontWeight.Bold,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -826,7 +826,9 @@ internal fun InstalledAppIcon(app: InstalledAppItem) {
     Image(
         bitmap = icon,
         contentDescription = app.appName,
-        modifier = Modifier.size(AppIconSize),
+        modifier = Modifier
+            .size(AppIconSize)
+            .clip(RoundedCornerShape(AppIconCornerRadius)),
     )
 }
 
