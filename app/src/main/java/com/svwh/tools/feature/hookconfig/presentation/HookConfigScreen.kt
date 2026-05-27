@@ -40,17 +40,35 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 
-internal val HookConfigPageBackground = Color(0xFFF7F8FC)
-internal val HookConfigPrimaryBlue = Color(0xFF4668D9)
+internal val HookConfigPageBackground = Color(0xFFFFFFFF)
+internal val HookConfigPageBackgroundTop = Color(0xFFF7FAFF)
+internal val HookConfigPageAmbientBlue = Color(0xFFEAF3FF)
+internal val HookConfigPageBackgroundMiddle = Color(0xFFFAFCFF)
+internal val HookConfigPageBackgroundBottom = Color(0xFFFFFFFF)
+internal val HookConfigPrimaryBlue = Color(0xFF1677FF)
 internal val HookConfigIconContainer = Color(0xFFEAF0FF)
 internal val HookConfigDivider = Color(0xFFE9EDF4)
 internal val HookConfigMutedText = Color(0xFF8A93A3)
+
+internal fun Modifier.hookConfigGradientBackground(): Modifier {
+    return background(
+        Brush.verticalGradient(
+            colorStops = arrayOf(
+                0.00f to HookConfigPageBackgroundTop,
+                0.32f to HookConfigPageAmbientBlue,
+                0.58f to HookConfigPageBackgroundMiddle,
+                1.00f to HookConfigPageBackgroundBottom,
+            ),
+        ),
+    )
+}
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -76,8 +94,10 @@ fun HookConfigRoute(
     val displayName = appName.ifBlank { packageName }
 
     Scaffold(
-        modifier = modifier.fillMaxSize(),
-        containerColor = HookConfigPageBackground,
+        modifier = modifier
+            .fillMaxSize()
+            .hookConfigGradientBackground(),
+        containerColor = Color.Transparent,
         topBar = {
             HookConfigHeader(
                 appName = displayName,
@@ -155,7 +175,7 @@ private fun HookConfigHeader(
     onTabClick: (Int) -> Unit,
 ) {
     Surface(
-        color = Color.White,
+        color = Color.Transparent,
         shadowElevation = 0.dp,
     ) {
         Column(

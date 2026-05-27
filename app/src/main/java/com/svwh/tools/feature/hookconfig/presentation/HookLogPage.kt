@@ -92,7 +92,7 @@ internal fun HookLogPage(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.White),
+            .hookConfigGradientBackground(),
     ) {
         HookLogToolbar(
             searchQuery = uiState.searchInput,
@@ -651,8 +651,7 @@ private fun HookLogRow(log: HookLogRecord) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Color.White)
-            .padding(horizontal = 12.dp),
+            .padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
@@ -717,8 +716,9 @@ private fun HookLogRow(log: HookLogRecord) {
     }
 
     HorizontalDivider(
-        modifier = Modifier.padding(start = 72.dp),
+        modifier = Modifier.padding(start = 66.dp, end = 16.dp),
         color = HookConfigDivider,
+        thickness = 0.7.dp,
     )
 }
 

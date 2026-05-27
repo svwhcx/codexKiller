@@ -51,6 +51,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -180,7 +181,7 @@ fun GlobalFridaScriptRoute(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(FridaPageBg),
+            .hookConfigGradientBackground(),
     ) {
         Row(
             modifier = Modifier
@@ -243,7 +244,7 @@ internal fun FridaScriptPage(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(FridaPageBg),
+            .hookConfigGradientBackground(),
     ) {
         Box(
             modifier = Modifier
@@ -274,10 +275,9 @@ internal fun FridaScriptPage(
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 12.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    contentPadding = PaddingValues(vertical = 6.dp),
                 ) {
-                    itemsIndexed(uiState.items, key = { _, item -> item.id }) { _, item ->
+                    itemsIndexed(uiState.items, key = { _, item -> item.id }) { index, item ->
                         FridaScriptListItem(
                             item = item,
                             checked = item.id in uiState.selectedIds,
@@ -293,6 +293,13 @@ internal fun FridaScriptPage(
                             onCheckedChange = { viewModel.toggleSelection(item.id) },
                             onEnabledChange = { viewModel.toggleEnabled(item) },
                         )
+                        if (index != uiState.items.lastIndex) {
+                            HorizontalDivider(
+                                modifier = Modifier.padding(start = 16.dp, end = 16.dp),
+                                color = HookConfigDivider,
+                                thickness = 0.7.dp,
+                            )
+                        }
                     }
                 }
             }
@@ -430,57 +437,44 @@ private fun FridaScriptListItem(
     onCheckedChange: () -> Unit,
     onEnabledChange: () -> Unit,
 ) {
-    Surface(
+    Row(
         modifier = Modifier
             .fillMaxWidth()
             .combinedClickable(onClick = onClick, onLongClick = onLongClick)
-            .shadow(
-                elevation = 8.dp,
-                shape = RoundedCornerShape(8.dp),
-                ambientColor = FridaShadow,
-                spotColor = FridaShadow,
-            ),
-        shape = RoundedCornerShape(8.dp),
-        color = FridaCardBg,
+            .padding(horizontal = 16.dp, vertical = 13.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 13.dp),
-            verticalAlignment = Alignment.CenterVertically,
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(5.dp),
         ) {
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(5.dp),
-            ) {
-                Text(
-                    text = item.name,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = FridaTitle,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Text(
-                    text = item.scriptContent.ifBlank { TEXT_SCRIPT_EMPTY_PREVIEW },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = FridaSubtitle,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-            Spacer(modifier = Modifier.width(12.dp))
-            if (selectionMode) {
-                Checkbox(
-                    checked = checked,
-                    onCheckedChange = { onCheckedChange() },
-                )
-            } else {
-                FridaSwitch(
-                    checked = item.enabled,
-                    onCheckedChange = { onEnabledChange() },
-                )
-            }
+            Text(
+                text = item.name,
+                style = MaterialTheme.typography.bodyMedium,
+                color = FridaTitle,
+                fontWeight = FontWeight.Medium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = item.scriptContent.ifBlank { TEXT_SCRIPT_EMPTY_PREVIEW },
+                style = MaterialTheme.typography.bodySmall,
+                color = FridaSubtitle,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        Spacer(modifier = Modifier.width(12.dp))
+        if (selectionMode) {
+            Checkbox(
+                checked = checked,
+                onCheckedChange = { onCheckedChange() },
+            )
+        } else {
+            FridaSwitch(
+                checked = item.enabled,
+                onCheckedChange = { onEnabledChange() },
+            )
         }
     }
 }
@@ -733,7 +727,7 @@ private fun FullScreenFridaScriptEditor(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(FridaEditorBg),
+            .hookConfigGradientBackground(),
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
             Row(

@@ -189,7 +189,7 @@ internal fun UserHookConfigPage(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(UserConfigListBg),
+            .hookConfigGradientBackground(),
     ) {
         Box(
             modifier = Modifier
@@ -204,10 +204,9 @@ internal fun UserHookConfigPage(
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 12.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    contentPadding = PaddingValues(vertical = 6.dp),
                 ) {
-                    itemsIndexed(uiState.items, key = { _, item -> item.id }) { _, item ->
+                    itemsIndexed(uiState.items, key = { _, item -> item.id }) { index, item ->
                         UserConfigListItem(
                             item = item,
                             checked = item.id in uiState.selectedIds,
@@ -223,6 +222,13 @@ internal fun UserHookConfigPage(
                             onCheckedChange = { viewModel.toggleSelection(item.id) },
                             onEnabledChange = { viewModel.toggleEnabled(item) },
                         )
+                        if (index != uiState.items.lastIndex) {
+                            HorizontalDivider(
+                                modifier = Modifier.padding(start = 16.dp, end = 16.dp),
+                                color = HookConfigDivider,
+                                thickness = 0.7.dp,
+                            )
+                        }
                     }
                 }
             }
@@ -360,59 +366,46 @@ private fun UserConfigListItem(
     onCheckedChange: () -> Unit,
     onEnabledChange: () -> Unit,
 ) {
-    Surface(
+    Row(
         modifier = Modifier
             .fillMaxWidth()
             .combinedClickable(onClick = onClick, onLongClick = onLongClick)
-            .shadow(
-                elevation = 8.dp,
-                shape = RoundedCornerShape(8.dp),
-                ambientColor = UserConfigShadow,
-                spotColor = UserConfigShadow,
-            ),
-        shape = RoundedCornerShape(8.dp),
-        color = UserConfigCardBg,
+            .padding(horizontal = 16.dp, vertical = 13.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 13.dp),
-            verticalAlignment = Alignment.CenterVertically,
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(5.dp),
         ) {
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(5.dp),
-            ) {
-                Text(
-                    text = item.configName,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = UserConfigTitle,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Text(
-                    text = "${item.className}.${item.methodName}(${item.params})",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = UserConfigSubtitle,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
+            Text(
+                text = item.configName,
+                style = MaterialTheme.typography.bodyMedium,
+                color = UserConfigTitle,
+                fontWeight = FontWeight.Medium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = "${item.className}.${item.methodName}(${item.params})",
+                style = MaterialTheme.typography.bodySmall,
+                color = UserConfigSubtitle,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
 
-            Spacer(modifier = Modifier.width(12.dp))
+        Spacer(modifier = Modifier.width(12.dp))
 
-            if (selectionMode) {
-                Checkbox(
-                    checked = checked,
-                    onCheckedChange = { onCheckedChange() },
-                )
-            } else {
-                UserConfigSwitch(
-                    checked = item.enabled,
-                    onCheckedChange = { onEnabledChange() },
-                )
-            }
+        if (selectionMode) {
+            Checkbox(
+                checked = checked,
+                onCheckedChange = { onCheckedChange() },
+            )
+        } else {
+            UserConfigSwitch(
+                checked = item.enabled,
+                onCheckedChange = { onEnabledChange() },
+            )
         }
     }
 }
@@ -547,7 +540,7 @@ private fun FullScreenUserConfigEditor(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(UserConfigEditorBg),
+            .hookConfigGradientBackground(),
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
             Row(
