@@ -56,11 +56,17 @@ import com.svwh.tools.feature.noenvironment.presentation.repack.progress.RepackP
 
 private val RepackPageBackgroundTop = Color(0xFFF7FAFF)
 private val RepackPageBackgroundBottom = Color(0xFFFFFFFF)
+private val RepackPageAmbientBlue = Color(0xFFEAF3FF)
 private val RepackTitleColor = Color(0xFF14213A)
 private val RepackSecondaryText = Color(0xFF7A8598)
-private val RepackSearchBorder = Color(0xFFE7ECF5)
+private val RepackSearchBorder = Color(0xFFE3EAF5)
+private val RepackSearchSurface = Color(0xB8F4F8FF)
 private val RepackPrimaryBlue = Color(0xFF1677FF)
 private val RepackDividerColor = Color(0xFFEFF2F7)
+private val RepackActionInset = Color(0xFFDCE9FA)
+private val RepackActionBorder = Color(0xFFCFE0F5)
+private val RepackActionHighlight = Color(0xFFF8FBFF)
+private val RepackActionShadow = Color(0xFFE6F0FC)
 
 @Composable
 fun RepackAppListRoute(
@@ -179,49 +185,71 @@ private fun RepackAppListScreen(
     onSearchQueryChange: (String) -> Unit,
     onRepackClick: (String) -> Unit,
 ) {
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
             .background(
                 Brush.verticalGradient(
-                    listOf(RepackPageBackgroundTop, RepackPageBackgroundBottom),
+                    colorStops = arrayOf(
+                        0.00f to RepackPageBackgroundTop,
+                        0.32f to RepackPageAmbientBlue,
+                        0.58f to Color(0xFFFAFCFF),
+                        1.00f to RepackPageBackgroundBottom,
+                    ),
                 ),
             ),
     ) {
-        RepackHero(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(174.dp),
-        )
-
         Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f)
-                .padding(horizontal = 16.dp),
+                .fillMaxSize(),
         ) {
-            RepackSearchBar(
-                value = uiState.searchQuery,
-                onValueChange = onSearchQueryChange,
-                modifier = Modifier.fillMaxWidth(),
+            RepackHero(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(174.dp),
             )
 
-            Spacer(modifier = Modifier.height(22.dp))
-
-            RepackListHeader(appCount = uiState.filteredApps.size)
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            if (uiState.isLoading) {
-                InlineLoadingRow(modifier = Modifier.fillMaxWidth())
-            } else if (uiState.filteredApps.isEmpty()) {
-                RepackEmptyApps(modifier = Modifier.weight(1f))
-            } else {
-                RepackAppList(
-                    apps = uiState.filteredApps,
-                    onRepackClick = onRepackClick,
-                    modifier = Modifier.weight(1f),
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+            ) {
+                RepackSearchBar(
+                    value = uiState.searchQuery,
+                    onValueChange = onSearchQueryChange,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
                 )
+
+                Spacer(modifier = Modifier.height(22.dp))
+
+                RepackListHeader(
+                    appCount = uiState.filteredApps.size,
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                if (uiState.isLoading) {
+                    InlineLoadingRow(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
+                    )
+                } else if (uiState.filteredApps.isEmpty()) {
+                    RepackEmptyApps(
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(horizontal = 16.dp),
+                    )
+                } else {
+                    RepackAppList(
+                        apps = uiState.filteredApps,
+                        onRepackClick = onRepackClick,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
             }
         }
     }
@@ -243,7 +271,7 @@ private fun RepackHero(
             modifier = Modifier
                 .align(Alignment.TopStart)
                 .statusBarsPadding()
-                .padding(start = 16.dp, top = 48.dp),
+                .padding(start = 16.dp, top = 34.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Row(
@@ -281,11 +309,11 @@ private fun RepackSearchBar(
 ) {
     Surface(
         modifier = modifier.height(44.dp),
-        shape = RoundedCornerShape(14.dp),
-        color = Color.White,
+        shape = RoundedCornerShape(8.dp),
+        color = RepackSearchSurface,
         border = BorderStroke(1.dp, RepackSearchBorder),
-        shadowElevation = 4.dp,
-        tonalElevation = 0.dp,
+        shadowElevation = 0.dp,
+        tonalElevation = 1.dp,
     ) {
         Row(
             modifier = Modifier
@@ -296,8 +324,8 @@ private fun RepackSearchBar(
             Icon(
                 imageVector = Icons.Outlined.Search,
                 contentDescription = null,
-                tint = Color(0xFF8B97AA),
-                modifier = Modifier.size(18.dp),
+                tint = Color(0xFF8996AA),
+                modifier = Modifier.size(17.dp),
             )
             Spacer(modifier = Modifier.width(8.dp))
             BasicTextField(
@@ -315,7 +343,7 @@ private fun RepackSearchBar(
                             Text(
                                 text = "搜索应用名称或包名",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = Color(0xFF8B97AA),
+                                color = Color(0xFF8D98AA),
                                 fontWeight = FontWeight.Medium,
                             )
                         }
@@ -328,9 +356,12 @@ private fun RepackSearchBar(
 }
 
 @Composable
-private fun RepackListHeader(appCount: Int) {
+private fun RepackListHeader(
+    appCount: Int,
+    modifier: Modifier = Modifier,
+) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         verticalAlignment = Alignment.Bottom,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
@@ -370,7 +401,7 @@ private fun RepackAppList(
             )
             if (index != apps.lastIndex) {
                 HorizontalDivider(
-                    modifier = Modifier.padding(start = 52.dp),
+                    modifier = Modifier.padding(start = 68.dp, end = 16.dp),
                     color = RepackDividerColor,
                     thickness = 0.7.dp,
                 )
@@ -388,7 +419,7 @@ private fun RepackAppRow(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onRepackClick(app.packageName) }
-            .padding(vertical = 10.dp),
+            .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         InstalledAppIcon(app = app)
@@ -416,15 +447,25 @@ private fun RepackAppRow(
         Spacer(modifier = Modifier.width(12.dp))
         Surface(
             modifier = Modifier
+                .width(58.dp)
                 .height(34.dp)
                 .clickable { onRepackClick(app.packageName) },
-            shape = RoundedCornerShape(17.dp),
-            color = Color(0xFFF6F9FF),
-            border = BorderStroke(1.dp, Color(0xFFE2ECFF)),
+            shape = RoundedCornerShape(8.dp),
+            color = RepackActionInset,
+            border = BorderStroke(1.dp, RepackActionBorder),
             shadowElevation = 0.dp,
         ) {
             Box(
-                modifier = Modifier.padding(horizontal = 14.dp),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(1.dp)
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(RepackActionShadow, RepackActionHighlight),
+                        ),
+                        RoundedCornerShape(8.dp),
+                    )
+                    .padding(horizontal = 13.dp),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(

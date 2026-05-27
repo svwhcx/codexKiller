@@ -86,9 +86,13 @@ private val HookSwitchHeight = 26.dp
 private val HookSwitchThumbSize = 22.dp
 private val EnvironmentPageBackgroundTop = Color(0xFFF7FAFF)
 private val EnvironmentPageBackgroundBottom = Color(0xFFFFFFFF)
+private val EnvironmentPageAmbientBlue = Color(0xFFEAF3FF)
 private val EnvironmentTitleColor = Color(0xFF14213A)
 private val EnvironmentSecondaryText = Color(0xFF7A8598)
-private val EnvironmentSearchBorder = Color(0xFFE7ECF5)
+private val EnvironmentSearchBorder = Color(0xFFE3EAF5)
+private val EnvironmentSearchSurface = Color(0xB8F4F8FF)
+private val EnvironmentSearchDivider = Color(0xFFE9EEF7)
+private val EnvironmentFilterButtonSurface = Color(0xE8EAF3FF)
 private val EnvironmentPrimaryBlue = Color(0xFF1677FF)
 private val EnvironmentDividerColor = Color(0xFFEFF2F7)
 
@@ -121,53 +125,75 @@ private fun EnvironmentScreen(
     onHookEnabledChange: (String, Boolean) -> Unit,
     onAppClick: (packageName: String, appName: String) -> Unit,
 ) {
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
             .background(
                 Brush.verticalGradient(
-                    listOf(EnvironmentPageBackgroundTop, EnvironmentPageBackgroundBottom),
+                    colorStops = arrayOf(
+                        0.00f to EnvironmentPageBackgroundTop,
+                        0.32f to EnvironmentPageAmbientBlue,
+                        0.58f to Color(0xFFFAFCFF),
+                        1.00f to EnvironmentPageBackgroundBottom,
+                    ),
                 ),
             ),
     ) {
-        EnvironmentHero(
-            lsposedEnabled = uiState.lsposedEnabled,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(174.dp),
-        )
-
         Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f)
-                .padding(horizontal = 16.dp),
+                .fillMaxSize(),
         ) {
-            EnvironmentSearchMenuBar(
-                value = uiState.searchQuery,
-                showSystemApps = uiState.showSystemApps,
-                onValueChange = onSearchQueryChange,
-                onShowSystemAppsChange = onShowSystemAppsChange,
-                modifier = Modifier.fillMaxWidth(),
+            EnvironmentHero(
+                lsposedEnabled = uiState.lsposedEnabled,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(174.dp),
             )
 
-            Spacer(modifier = Modifier.height(22.dp))
-
-            EnvironmentListHeader(appCount = uiState.filteredApps.size)
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            if (uiState.isLoading) {
-                InlineLoadingRow(modifier = Modifier.fillMaxWidth())
-            } else if (uiState.filteredApps.isEmpty()) {
-                EnvironmentEmptyApps(modifier = Modifier.weight(1f))
-            } else {
-                EnvironmentAppList(
-                    apps = uiState.filteredApps,
-                    onHookEnabledChange = onHookEnabledChange,
-                    onAppClick = onAppClick,
-                    modifier = Modifier.weight(1f),
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+            ) {
+                EnvironmentSearchMenuBar(
+                    value = uiState.searchQuery,
+                    showSystemApps = uiState.showSystemApps,
+                    onValueChange = onSearchQueryChange,
+                    onShowSystemAppsChange = onShowSystemAppsChange,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
                 )
+
+                Spacer(modifier = Modifier.height(22.dp))
+
+                EnvironmentListHeader(
+                    appCount = uiState.filteredApps.size,
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                if (uiState.isLoading) {
+                    InlineLoadingRow(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
+                    )
+                } else if (uiState.filteredApps.isEmpty()) {
+                    EnvironmentEmptyApps(
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(horizontal = 16.dp),
+                    )
+                } else {
+                    EnvironmentAppList(
+                        apps = uiState.filteredApps,
+                        onHookEnabledChange = onHookEnabledChange,
+                        onAppClick = onAppClick,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
             }
         }
     }
@@ -197,7 +223,7 @@ private fun EnvironmentHero(
             modifier = Modifier
                 .align(Alignment.TopStart)
                 .statusBarsPadding()
-                .padding(start = 16.dp, top = 48.dp),
+                .padding(start = 16.dp, top = 34.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(
@@ -228,23 +254,23 @@ private fun EnvironmentSearchMenuBar(
 
     Surface(
         modifier = modifier.height(44.dp),
-        shape = RoundedCornerShape(14.dp),
-        color = Color.White,
+        shape = RoundedCornerShape(8.dp),
+        color = EnvironmentSearchSurface,
         border = BorderStroke(1.dp, EnvironmentSearchBorder),
-        shadowElevation = 4.dp,
-        tonalElevation = 0.dp,
+        shadowElevation = 0.dp,
+        tonalElevation = 1.dp,
     ) {
         Row(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(start = 14.dp, end = 6.dp),
+                .padding(start = 14.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
                 imageVector = Icons.Outlined.Search,
                 contentDescription = null,
-                tint = Color(0xFF8B97AA),
-                modifier = Modifier.size(18.dp),
+                tint = Color(0xFF8996AA),
+                modifier = Modifier.size(17.dp),
             )
             Spacer(modifier = Modifier.width(8.dp))
             BasicTextField(
@@ -262,7 +288,7 @@ private fun EnvironmentSearchMenuBar(
                             Text(
                                 text = "搜索应用名称或包名",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = Color(0xFF8B97AA),
+                                color = Color(0xFF8D98AA),
                                 fontWeight = FontWeight.Medium,
                             )
                         }
@@ -271,13 +297,26 @@ private fun EnvironmentSearchMenuBar(
                 },
             )
 
+            Box(
+                modifier = Modifier
+                    .padding(start = 12.dp)
+                    .width(1.dp)
+                    .height(44.dp)
+                    .background(EnvironmentSearchDivider),
+            )
+
             Box {
                 Surface(
                     modifier = Modifier
-                        .height(34.dp)
+                        .height(44.dp)
                         .clickable { filterExpanded = true },
-                    shape = RoundedCornerShape(17.dp),
-                    color = Color(0xFFF6F9FF),
+                    shape = RoundedCornerShape(
+                        topStart = 0.dp,
+                        bottomStart = 0.dp,
+                        topEnd = 8.dp,
+                        bottomEnd = 8.dp,
+                    ),
+                    color = EnvironmentFilterButtonSurface,
                     shadowElevation = 0.dp,
                 ) {
                     Row(
@@ -289,7 +328,7 @@ private fun EnvironmentSearchMenuBar(
                             imageVector = Icons.Outlined.FilterList,
                             contentDescription = null,
                             tint = EnvironmentPrimaryBlue,
-                            modifier = Modifier.size(18.dp),
+                            modifier = Modifier.size(17.dp),
                         )
                         Text(
                             text = "菜单",
@@ -343,9 +382,12 @@ private fun EnvironmentSearchMenuBar(
 }
 
 @Composable
-private fun EnvironmentListHeader(appCount: Int) {
+private fun EnvironmentListHeader(
+    appCount: Int,
+    modifier: Modifier = Modifier,
+) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         verticalAlignment = Alignment.Bottom,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
@@ -387,7 +429,7 @@ private fun EnvironmentAppList(
             )
             if (index != apps.lastIndex) {
                 HorizontalDivider(
-                    modifier = Modifier.padding(start = 52.dp),
+                    modifier = Modifier.padding(start = 68.dp, end = 16.dp),
                     color = EnvironmentDividerColor,
                     thickness = 0.7.dp,
                 )
@@ -406,7 +448,7 @@ private fun EnvironmentAppRow(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(vertical = 10.dp),
+            .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         InstalledAppIcon(app = app)
