@@ -1,6 +1,7 @@
 package com.svwh.tools.feature.environment.presentation
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -16,10 +17,13 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material.icons.outlined.FilterList
@@ -27,6 +31,7 @@ import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -42,12 +47,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.drawable.toBitmap
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.svwh.tools.R
 import com.svwh.tools.core.permission.rememberExternalStoragePermissionGate
 import com.svwh.tools.feature.environment.domain.model.InstalledAppItem
 
@@ -75,6 +83,13 @@ private val BannerIconSize = 20.dp
 private val HookSwitchWidth = 44.dp
 private val HookSwitchHeight = 26.dp
 private val HookSwitchThumbSize = 22.dp
+private val EnvironmentPageBackgroundTop = Color(0xFFF7FAFF)
+private val EnvironmentPageBackgroundBottom = Color(0xFFFFFFFF)
+private val EnvironmentTitleColor = Color(0xFF14213A)
+private val EnvironmentSecondaryText = Color(0xFF7A8598)
+private val EnvironmentSearchBorder = Color(0xFFE7ECF5)
+private val EnvironmentPrimaryBlue = Color(0xFF1677FF)
+private val EnvironmentDividerColor = Color(0xFFEFF2F7)
 
 @Composable
 fun EnvironmentRoute(
@@ -106,22 +121,335 @@ private fun EnvironmentScreen(
     onAppClick: (packageName: String, appName: String) -> Unit,
 ) {
     Column(
-        modifier = Modifier.fillMaxSize()
+        modifier = Modifier
+            .fillMaxSize()
+            .background(
+                Brush.verticalGradient(
+                    listOf(EnvironmentPageBackgroundTop, EnvironmentPageBackgroundBottom),
+                ),
+            ),
     ) {
-        LsposedStatusCard(
-            enabled = uiState.lsposedEnabled,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+        EnvironmentHero(
+            lsposedEnabled = uiState.lsposedEnabled,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(174.dp),
         )
 
-        Spacer(modifier = Modifier.height(12.dp)) // Add some space between banner and card
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f)
+                .padding(horizontal = 16.dp),
+        ) {
+            EnvironmentSearchMenuBar(
+                value = uiState.searchQuery,
+                showSystemApps = uiState.showSystemApps,
+                onValueChange = onSearchQueryChange,
+                onShowSystemAppsChange = onShowSystemAppsChange,
+                modifier = Modifier.fillMaxWidth(),
+            )
 
-        EnvironmentAppListCard(
-            uiState = uiState,
-            onSearchQueryChange = onSearchQueryChange,
-            onShowSystemAppsChange = onShowSystemAppsChange,
-            onHookEnabledChange = onHookEnabledChange,
-            onAppClick = onAppClick,
-            modifier = Modifier.weight(1f)
+            Spacer(modifier = Modifier.height(22.dp))
+
+            EnvironmentListHeader(appCount = uiState.filteredApps.size)
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            if (uiState.isLoading) {
+                InlineLoadingRow(modifier = Modifier.fillMaxWidth())
+            } else if (uiState.filteredApps.isEmpty()) {
+                EnvironmentEmptyApps(modifier = Modifier.weight(1f))
+            } else {
+                EnvironmentAppList(
+                    apps = uiState.filteredApps,
+                    onHookEnabledChange = onHookEnabledChange,
+                    onAppClick = onAppClick,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun EnvironmentHero(
+    lsposedEnabled: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    val subtitle = if (lsposedEnabled) {
+        "为应用提供实时、独立的 Hook 运行环境"
+    } else {
+        "未检测到 LSPosed，当前功能可能不可用"
+    }
+    val subtitleColor = if (lsposedEnabled) EnvironmentSecondaryText else WarningRed
+
+    Box(modifier = modifier) {
+        Image(
+            painter = painterResource(id = R.drawable.bg_no_environment_header),
+            contentDescription = null,
+            contentScale = ContentScale.FillWidth,
+            alignment = Alignment.TopCenter,
+            modifier = Modifier.fillMaxSize(),
+        )
+        Column(
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .statusBarsPadding()
+                .padding(start = 16.dp, top = 48.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text(
+                text = "有环境",
+                style = MaterialTheme.typography.titleLarge,
+                color = EnvironmentTitleColor,
+                fontWeight = FontWeight.Bold,
+            )
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodyMedium,
+                color = subtitleColor,
+                fontWeight = FontWeight.Medium,
+            )
+        }
+    }
+}
+
+@Composable
+private fun EnvironmentSearchMenuBar(
+    value: String,
+    showSystemApps: Boolean,
+    onValueChange: (String) -> Unit,
+    onShowSystemAppsChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var filterExpanded by remember { mutableStateOf(false) }
+
+    Surface(
+        modifier = modifier.height(44.dp),
+        shape = RoundedCornerShape(14.dp),
+        color = Color.White,
+        border = BorderStroke(1.dp, EnvironmentSearchBorder),
+        shadowElevation = 4.dp,
+        tonalElevation = 0.dp,
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(start = 14.dp, end = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Search,
+                contentDescription = null,
+                tint = Color(0xFF8B97AA),
+                modifier = Modifier.size(18.dp),
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            BasicTextField(
+                value = value,
+                onValueChange = onValueChange,
+                singleLine = true,
+                textStyle = MaterialTheme.typography.bodySmall.copy(
+                    color = EnvironmentTitleColor,
+                    fontWeight = FontWeight.Medium,
+                ),
+                modifier = Modifier.weight(1f),
+                decorationBox = { innerTextField ->
+                    Box(contentAlignment = Alignment.CenterStart) {
+                        if (value.isBlank()) {
+                            Text(
+                                text = "搜索应用名称或包名",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color(0xFF8B97AA),
+                                fontWeight = FontWeight.Medium,
+                            )
+                        }
+                        innerTextField()
+                    }
+                },
+            )
+
+            Box {
+                Surface(
+                    modifier = Modifier
+                        .height(34.dp)
+                        .clickable { filterExpanded = true },
+                    shape = RoundedCornerShape(17.dp),
+                    color = Color(0xFFF6F9FF),
+                    shadowElevation = 0.dp,
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(5.dp),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.FilterList,
+                            contentDescription = null,
+                            tint = EnvironmentPrimaryBlue,
+                            modifier = Modifier.size(18.dp),
+                        )
+                        Text(
+                            text = "菜单",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = EnvironmentPrimaryBlue,
+                            fontWeight = FontWeight.Medium,
+                        )
+                    }
+                }
+
+                DropdownMenu(
+                    expanded = filterExpanded,
+                    onDismissRequest = { filterExpanded = false },
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("仅用户应用") },
+                        onClick = {
+                            filterExpanded = false
+                            onShowSystemAppsChange(false)
+                        },
+                        trailingIcon = {
+                            if (!showSystemApps) {
+                                Text(
+                                    text = "✓",
+                                    color = EnvironmentPrimaryBlue,
+                                    style = MaterialTheme.typography.titleMedium,
+                                )
+                            }
+                        },
+                    )
+                    DropdownMenuItem(
+                        text = { Text("包含系统应用") },
+                        onClick = {
+                            filterExpanded = false
+                            onShowSystemAppsChange(true)
+                        },
+                        trailingIcon = {
+                            if (showSystemApps) {
+                                Text(
+                                    text = "✓",
+                                    color = EnvironmentPrimaryBlue,
+                                    style = MaterialTheme.typography.titleMedium,
+                                )
+                            }
+                        },
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun EnvironmentListHeader(appCount: Int) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.Bottom,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(
+            text = "应用列表",
+            style = MaterialTheme.typography.titleSmall,
+            color = EnvironmentTitleColor,
+            fontWeight = FontWeight.Bold,
+        )
+        Text(
+            text = "共 ${appCount} 个应用",
+            style = MaterialTheme.typography.bodySmall,
+            color = EnvironmentSecondaryText,
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier.padding(bottom = 1.dp),
+        )
+    }
+}
+
+@Composable
+private fun EnvironmentAppList(
+    apps: List<InstalledAppItem>,
+    onHookEnabledChange: (String, Boolean) -> Unit,
+    onAppClick: (packageName: String, appName: String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    LazyColumn(
+        modifier = modifier.fillMaxWidth(),
+        contentPadding = PaddingValues(bottom = 16.dp),
+    ) {
+        itemsIndexed(
+            items = apps,
+            key = { _, app -> app.packageName },
+        ) { index, app ->
+            EnvironmentAppRow(
+                app = app,
+                onHookEnabledChange = onHookEnabledChange,
+                onClick = { onAppClick(app.packageName, app.appName) },
+            )
+            if (index != apps.lastIndex) {
+                HorizontalDivider(
+                    modifier = Modifier.padding(start = 52.dp),
+                    color = EnvironmentDividerColor,
+                    thickness = 0.7.dp,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun EnvironmentAppRow(
+    app: InstalledAppItem,
+    onHookEnabledChange: (String, Boolean) -> Unit,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        InstalledAppIcon(app = app)
+        Spacer(modifier = Modifier.width(12.dp))
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(3.dp),
+        ) {
+            Text(
+                text = app.appName,
+                style = MaterialTheme.typography.bodyLarge,
+                color = EnvironmentTitleColor,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = app.packageName,
+                style = MaterialTheme.typography.bodySmall,
+                color = EnvironmentSecondaryText,
+                fontWeight = FontWeight.Medium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        Spacer(modifier = Modifier.width(12.dp))
+        HookSwitch(
+            checked = app.hookEnabled,
+            onCheckedChange = { enabled -> onHookEnabledChange(app.packageName, enabled) },
+        )
+    }
+}
+
+@Composable
+private fun EnvironmentEmptyApps(modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier.fillMaxWidth(),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = "暂无有环境应用",
+            style = MaterialTheme.typography.bodyMedium,
+            color = EnvironmentSecondaryText,
+            fontWeight = FontWeight.Medium,
         )
     }
 }

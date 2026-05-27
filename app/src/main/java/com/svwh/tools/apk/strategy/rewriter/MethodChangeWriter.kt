@@ -3,10 +3,11 @@
 import android.util.Log
 import org.jf.dexlib2.builder.MutableMethodImplementation
 import org.jf.dexlib2.builder.instruction.BuilderInstruction35c
-import org.jf.dexlib2.dexbacked.reference.DexBackedMethodReference
 import org.jf.dexlib2.iface.Method
 import org.jf.dexlib2.iface.MethodImplementation
+import org.jf.dexlib2.iface.reference.MethodReference
 import org.jf.dexlib2.immutable.ImmutableMethod
+import org.jf.dexlib2.immutable.reference.ImmutableMethodReference
 import org.jf.dexlib2.rewriter.Rewriter
 
 /**
@@ -41,7 +42,7 @@ class MethodChangeWriter(private val superClazz:String): Rewriter<Method> {
         i.instructions.forEachIndexed { index, it ->
             if (it is BuilderInstruction35c){
                 val reference = it.reference
-                if (reference is DexBackedMethodReference){
+                if (reference is MethodReference){
                     if (reference.definingClass == "Landroid/app/Application;"){
                         Log.i("调用父类方法", "${it.reference}")
                         mutableIndex.add(index)
@@ -52,11 +53,13 @@ class MethodChangeWriter(private val superClazz:String): Rewriter<Method> {
         }
         mutableIndex.forEach {
             val builderInstruction = i.instructions[it] as BuilderInstruction35c
-            val reference = builderInstruction.reference as DexBackedMethodReference
-            val field = reference.javaClass.getDeclaredField("methodIndex")
-            field.isAccessible = true
-            val methodIndex = field.get(reference) as Int
-            val newReference = KillerDexBackedMethodReference(clazz = superClazz,reference.dexFile,methodIndex)
+            val reference = builderInstruction.reference as MethodReference
+            val newReference = ImmutableMethodReference(
+                superClazz,
+                reference.name,
+                reference.parameterTypes,
+                reference.returnType,
+            )
             val builderInstruction35c = BuilderInstruction35c(
                 builderInstruction.opcode,
                 builderInstruction.registerCount,
