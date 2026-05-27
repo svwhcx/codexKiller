@@ -1,5 +1,6 @@
 package com.svwh.tools.feature.noenvironment.data.repack
 
+import android.graphics.drawable.Drawable
 import com.svwh.tools.feature.noenvironment.domain.model.AppendRepackStepCommand
 import com.svwh.tools.feature.noenvironment.domain.model.RepackProgressState
 import com.svwh.tools.feature.noenvironment.domain.model.RepackStep
@@ -18,12 +19,13 @@ class RepackProgressControllerImpl @Inject constructor() : RepackProgressControl
     private val _state = MutableStateFlow(RepackProgressState())
     override val state: StateFlow<RepackProgressState> = _state.asStateFlow()
 
-    override fun startSession(packageName: String, appName: String) {
+    override fun startSession(packageName: String, appName: String, appIcon: Drawable?) {
         _state.value = RepackProgressState(
             visible = true,
             sessionId = System.currentTimeMillis(),
             packageName = packageName,
             appName = appName,
+            appIcon = appIcon,
             steps = emptyList(),
             sessionFinished = false,
         )

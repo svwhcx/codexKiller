@@ -6,4 +6,5 @@ data class RepackStep(
     val status: RepackStepStatus,
     val isTerminal: Boolean = false,
     val terminalOutcome: RepackTerminalOutcome? = null,
+    val timestampMillis: Long = System.currentTimeMillis(),
 )

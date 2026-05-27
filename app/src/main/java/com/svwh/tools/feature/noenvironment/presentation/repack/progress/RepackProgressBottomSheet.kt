@@ -6,6 +6,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -14,12 +15,12 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
@@ -32,12 +33,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.core.graphics.drawable.toBitmap
 import com.svwh.tools.feature.noenvironment.domain.model.RepackProgressState
 import com.svwh.tools.feature.noenvironment.domain.model.RepackStepStatus
 import com.svwh.tools.feature.noenvironment.domain.model.RepackTerminalOutcome
@@ -46,10 +50,19 @@ import com.svwh.tools.feature.noenvironment.presentation.components.RepackFailur
 
 private val PanelMinHeight = 400.dp
 private val PanelHeightFraction = 0.58f
-private val PanelTopCornerRadius = 20.dp
+private val PanelTopCornerRadius = 18.dp
 private val ActionTextHorizontalPadding = 8.dp
 private val ActionTextVerticalPadding = 4.dp
 private val ActionRippleCornerRadius = 4.dp
+private val PanelBackgroundTop = Color(0xFFF8FBFF)
+private val PanelBackgroundMiddle = Color(0xFFF1F7FF)
+private val PanelBackgroundBottom = Color(0xFFFFFFFF)
+private val HeaderDivider = Color(0xFFE9EEF7)
+private val AppIconSurface = Color(0xFFFFFFFF)
+private val AppIconFallbackStart = Color(0xFFFF8A00)
+private val AppIconFallbackEnd = Color(0xFF1677FF)
+private val StatusTextMuted = Color(0xFF7A8598)
+private val TitleText = Color(0xFF14213A)
 
 @Composable
 fun RepackProgressSheetHost(
@@ -76,7 +89,7 @@ fun RepackProgressSheetHost(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.35f))
+                    .background(Color.Black.copy(alpha = 0.28f))
                     .clickable(
                         interactionSource = scrimInteractionSource,
                         indication = null,
@@ -128,78 +141,68 @@ private fun RepackProgressPanel(
             topStart = PanelTopCornerRadius,
             topEnd = PanelTopCornerRadius,
         ),
-        color = MaterialTheme.colorScheme.surface,
+        color = Color.Transparent,
         shadowElevation = 12.dp,
     ) {
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 20.dp)
-                .padding(top = 12.dp, bottom = 20.dp),
-        ) {
-            Box(
-                modifier = Modifier
-                    .align(Alignment.CenterHorizontally)
-                    .width(40.dp)
-                    .height(4.dp)
-                    .background(
-                        color = Color(0xFFD7DCE3),
-                        shape = RoundedCornerShape(2.dp),
+                .background(
+                    Brush.verticalGradient(
+                        colorStops = arrayOf(
+                            0.00f to PanelBackgroundTop,
+                            0.40f to PanelBackgroundMiddle,
+                            1.00f to PanelBackgroundBottom,
+                        ),
                     ),
-            )
+                ),
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp)
+                    .padding(top = 18.dp, bottom = 18.dp),
+            ) {
+                RepackProgressHeader(
+                    state = state,
+                    onDismiss = onDismiss,
+                    onStop = onStop,
+                    onInstall = onInstall,
+                    onDetails = onDetails,
+                )
 
-            Spacer(modifier = Modifier.height(14.dp))
+                Spacer(modifier = Modifier.height(16.dp))
+                HorizontalDivider(color = HeaderDivider, thickness = 0.7.dp)
+                Spacer(modifier = Modifier.height(18.dp))
 
-            Text(
-                text = state.appName,
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            RepackCurrentStatusRow(
-                state = state,
-                onDismiss = onDismiss,
-                onStop = onStop,
-                onInstall = onInstall,
-                onDetails = onDetails,
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-            HorizontalDivider(color = Color(0xFFE8ECF1))
-            Spacer(modifier = Modifier.height(14.dp))
-
-            if (state.steps.isEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        text = "正在准备打包流程...",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                if (state.steps.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
+                        contentAlignment = Alignment.TopStart,
+                    ) {
+                        Text(
+                            text = "正在准备打包流程...",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = StatusTextMuted,
+                        )
+                    }
+                } else {
+                    RepackStepTimeline(
+                        steps = state.steps,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
                     )
                 }
-            } else {
-                RepackStepTimeline(
-                    steps = state.steps,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f)
-                        .fillMaxHeight(),
-                )
             }
         }
     }
 }
 
 @Composable
-private fun RepackCurrentStatusRow(
+private fun RepackProgressHeader(
     state: RepackProgressState,
     onDismiss: () -> Unit,
     onStop: () -> Unit,
@@ -209,21 +212,38 @@ private fun RepackCurrentStatusRow(
 ) {
     Row(
         modifier = modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
+        verticalAlignment = Alignment.Top,
     ) {
-        Text(
-            text = "当前状态：",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Text(
-            text = currentStatusText(state),
-            style = MaterialTheme.typography.bodyMedium,
-            color = RepackBlue,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
+        RepackAppMark(state = state)
+        Spacer(modifier = Modifier.width(10.dp))
+        Column(
             modifier = Modifier.weight(1f),
-        )
+        ) {
+            Text(
+                text = state.appName.ifBlank { state.packageName },
+                style = MaterialTheme.typography.titleSmall,
+                color = TitleText,
+                fontWeight = FontWeight.Medium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = "当前状态：",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = StatusTextMuted,
+                )
+                Text(
+                    text = currentStatusText(state),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = currentStatusColor(state),
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
 
         RepackStatusActions(
             state = state,
@@ -231,7 +251,43 @@ private fun RepackCurrentStatusRow(
             onStop = onStop,
             onInstall = onInstall,
             onDetails = onDetails,
+            modifier = Modifier.padding(top = 8.dp),
         )
+    }
+}
+
+@Composable
+private fun RepackAppMark(state: RepackProgressState) {
+    val icon = remember(state.packageName, state.appIcon) {
+        state.appIcon?.toBitmap(width = 72, height = 72)?.asImageBitmap()
+    }
+    Box(
+        modifier = Modifier
+            .size(36.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .background(AppIconSurface),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (icon != null) {
+            Image(
+                bitmap = icon,
+                contentDescription = state.appName,
+                modifier = Modifier
+                    .size(30.dp)
+                    .clip(RoundedCornerShape(7.dp)),
+            )
+        } else {
+            Box(
+                modifier = Modifier
+                    .size(22.dp)
+                    .clip(RoundedCornerShape(5.dp))
+                    .background(
+                        Brush.linearGradient(
+                            colors = listOf(AppIconFallbackStart, AppIconFallbackEnd),
+                        ),
+                    ),
+            )
+        }
     }
 }
 
@@ -242,8 +298,10 @@ private fun RepackStatusActions(
     onStop: () -> Unit,
     onInstall: () -> Unit,
     onDetails: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     Row(
+        modifier = modifier,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -327,17 +385,25 @@ private fun currentStatusText(state: RepackProgressState): String {
         val terminal = state.steps.lastOrNull { it.isTerminal }
         return when {
             terminal?.terminalOutcome == RepackTerminalOutcome.Failure ||
-                terminal?.status == RepackStepStatus.Failed -> "打包失败"
+                terminal?.status == RepackStepStatus.Failed -> "失败"
             state.steps.any { it.status == RepackStepStatus.Failed } -> "已停止"
-            else -> "打包失败"
+            else -> "失败"
         }
     }
 
     val running = state.steps.lastOrNull { it.status == RepackStepStatus.Running }
     return when {
-        running != null -> "正在执行「${running.label}」"
-        state.steps.isEmpty() -> "准备开始打包"
-        else -> "等待下一步"
+        running != null -> "执行中"
+        state.steps.isEmpty() -> "准备开始"
+        else -> "执行中"
+    }
+}
+
+private fun currentStatusColor(state: RepackProgressState): Color {
+    return when {
+        state.steps.any { it.status == RepackStepStatus.Failed } -> RepackFailureRed
+        state.sessionFinished && isRepackSuccess(state) -> RepackBlue
+        else -> RepackBlue
     }
 }
 

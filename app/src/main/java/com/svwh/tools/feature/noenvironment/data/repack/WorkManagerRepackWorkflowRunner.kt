@@ -34,6 +34,7 @@ class WorkManagerRepackWorkflowRunner @Inject constructor(
         progressController.startSession(
             packageName = app.packageName,
             appName = app.appName,
+            appIcon = app.icon,
         )
         progressController.appendStep(
             AppendRepackStepCommand(

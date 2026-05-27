@@ -28,6 +28,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.svwh.tools.feature.noenvironment.domain.model.RepackStep
@@ -36,10 +37,17 @@ import com.svwh.tools.feature.noenvironment.domain.model.RepackTerminalOutcome
 import com.svwh.tools.feature.noenvironment.presentation.components.RepackBlue
 import com.svwh.tools.feature.noenvironment.presentation.components.RepackFailureRed
 import com.svwh.tools.feature.noenvironment.presentation.components.RepackSuccessGreen
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
-private val StepIndicatorSize = 24.dp
-private val StepRowHeight = 44.dp
-private val VerticalConnectorWidth = 2.dp
+private val StepIndicatorSize = 16.dp
+private val StepIconSize = 10.dp
+private val StepRowHeight = 56.dp
+private val VerticalConnectorWidth = 1.dp
+private val TimelineText = Color(0xFF2F3A4A)
+private val TimelineTime = Color(0xFF8A96A8)
+private val TimelineConnector = Color(0xFFDCE4EF)
 
 @Composable
 fun RepackStepTimeline(
@@ -80,10 +88,11 @@ private fun RepackStepTimelineRow(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .height(if (showConnectorBelow) StepRowHeight + 12.dp else StepRowHeight),
+            .height(StepRowHeight),
         verticalAlignment = Alignment.Top,
     ) {
         Column(
+            modifier = Modifier.width(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             RepackStepIndicator(step = step)
@@ -92,22 +101,34 @@ private fun RepackStepTimelineRow(
                     modifier = Modifier
                         .padding(top = 4.dp)
                         .width(VerticalConnectorWidth)
-                        .height(12.dp)
+                        .height(32.dp)
                         .background(connectorColor(step)),
                 )
             }
         }
 
-        Text(
-            text = step.label,
-            style = MaterialTheme.typography.bodyMedium,
-            color = stepLabelColor(step),
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
+        Column(
             modifier = Modifier
-                .padding(start = 14.dp, top = 2.dp)
+                .padding(start = 10.dp)
                 .weight(1f),
-        )
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Text(
+                text = step.label,
+                style = MaterialTheme.typography.bodyMedium,
+                color = stepLabelColor(step),
+                fontWeight = FontWeight.Medium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = formatStepTime(step.timestampMillis),
+                style = MaterialTheme.typography.bodySmall,
+                color = TimelineTime,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
     }
 }
 
@@ -118,13 +139,13 @@ private fun RepackStepIndicator(step: RepackStep) {
             Box(
                 modifier = Modifier
                     .size(StepIndicatorSize)
-                    .border(1.5.dp, Color(0xFFBFC7D1), CircleShape),
+                    .border(1.dp, TimelineConnector, CircleShape),
             )
         }
         RepackStepStatus.Running -> {
             CircularProgressIndicator(
                 modifier = Modifier.size(StepIndicatorSize),
-                strokeWidth = 2.5.dp,
+                strokeWidth = 2.dp,
                 color = RepackBlue,
             )
         }
@@ -139,7 +160,7 @@ private fun RepackStepIndicator(step: RepackStep) {
                 Icon(
                     imageVector = Icons.Filled.Check,
                     contentDescription = null,
-                    modifier = Modifier.size(14.dp),
+                    modifier = Modifier.size(StepIconSize),
                     tint = Color.White,
                 )
             }
@@ -155,7 +176,7 @@ private fun RepackStepIndicator(step: RepackStep) {
                 Icon(
                     imageVector = Icons.Filled.Close,
                     contentDescription = null,
-                    modifier = Modifier.size(14.dp),
+                    modifier = Modifier.size(StepIconSize),
                     tint = Color.White,
                 )
             }
@@ -171,7 +192,7 @@ private fun stepLabelColor(step: RepackStep): Color {
             if (step.terminalOutcome == RepackTerminalOutcome.Failure) {
                 RepackFailureRed
             } else {
-                RepackSuccessGreen
+                TimelineText
             }
         }
         RepackStepStatus.Failed -> RepackFailureRed
@@ -181,8 +202,12 @@ private fun stepLabelColor(step: RepackStep): Color {
 
 private fun connectorColor(step: RepackStep): Color {
     return when (step.status) {
-        RepackStepStatus.Success -> RepackSuccessGreen.copy(alpha = 0.55f)
-        RepackStepStatus.Failed -> RepackFailureRed.copy(alpha = 0.55f)
-        else -> Color(0xFFD7DCE3)
+        RepackStepStatus.Success -> RepackSuccessGreen.copy(alpha = 0.45f)
+        RepackStepStatus.Failed -> RepackFailureRed.copy(alpha = 0.45f)
+        else -> TimelineConnector
     }
+}
+
+private fun formatStepTime(timestampMillis: Long): String {
+    return SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date(timestampMillis))
 }
