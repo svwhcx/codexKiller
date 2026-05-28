@@ -171,8 +171,8 @@ private fun QuickConfigItemRow(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(enabled = hasDetails && enabled) {
-                updateChecked(true)
+            .clickable(enabled = enabled) {
+                updateChecked(!displayedChecked)
             }
             .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),

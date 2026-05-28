@@ -147,7 +147,7 @@ private fun EnvironmentScreen(
                 lsposedEnabled = uiState.lsposedEnabled,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(174.dp),
+                    .height(150.dp),
             )
 
             Column(
@@ -213,11 +213,15 @@ private fun EnvironmentHero(
 
     Box(modifier = modifier) {
         Image(
-            painter = painterResource(id = R.drawable.bg_no_environment_header),
+            painter = painterResource(id = R.drawable.ic_environment_header),
             contentDescription = null,
-            contentScale = ContentScale.FillWidth,
-            alignment = Alignment.TopCenter,
-            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Fit,
+            alignment = Alignment.TopEnd,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .statusBarsPadding()
+                .offset(x = (-10).dp, y = 10.dp)
+                .size(width = 160.dp, height = 160.dp),
         )
         Column(
             modifier = Modifier

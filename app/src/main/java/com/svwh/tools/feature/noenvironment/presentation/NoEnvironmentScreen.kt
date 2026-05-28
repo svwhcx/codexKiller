@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -113,7 +114,7 @@ private fun NoEnvironmentScreen(
             NoEnvironmentHero(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(174.dp),
+                    .height(150.dp),
             )
 
             Column(
@@ -170,11 +171,15 @@ private fun NoEnvironmentHero(
 ) {
     Box(modifier = modifier) {
         Image(
-            painter = painterResource(id = R.drawable.bg_no_environment_header),
+            painter = painterResource(id = R.drawable.ic_no_environment_header),
             contentDescription = null,
-            contentScale = ContentScale.FillWidth,
-            alignment = Alignment.TopCenter,
-            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Fit,
+            alignment = Alignment.TopEnd,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .statusBarsPadding()
+                .offset(x = (-10).dp, y = 10.dp)
+                .size(width = 160.dp, height = 160.dp),
         )
         Column(
             modifier = Modifier
