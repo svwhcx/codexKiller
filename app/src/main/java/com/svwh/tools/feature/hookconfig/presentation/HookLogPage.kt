@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -18,9 +19,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Close
@@ -32,6 +37,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -53,6 +59,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -87,6 +94,16 @@ internal fun HookLogPage(
 
     LaunchedEffect(envType, packageName) {
         viewModel.initialize(envType = envType, packageName = packageName)
+    }
+
+    val selectedLog = uiState.selectedLog
+    if (selectedLog != null) {
+        HookLogDetailPage(
+            log = selectedLog,
+            isLoading = uiState.isLogDetailLoading,
+            onBackClick = viewModel::dismissLogDetail,
+        )
+        return
     }
 
     Column(
@@ -124,7 +141,10 @@ internal fun HookLogPage(
                 hasMoreData = uiState.hasMore,
             ) {
                 items(uiState.logs, key = { it.id }) { log ->
-                    HookLogRow(log = log)
+                    HookLogRow(
+                        log = log,
+                        onClick = { viewModel.openLogDetail(log) },
+                    )
                 }
             }
         }
@@ -640,7 +660,10 @@ private fun hookLogTypeColor(option: HookLogTypeOption): Color {
 }
 
 @Composable
-private fun HookLogRow(log: HookLogRecord) {
+private fun HookLogRow(
+    log: HookLogRecord,
+    onClick: () -> Unit,
+) {
     val levelColor = when {
         log.status != null && log.status != 0 -> Color(0xFFE84C55)
         log.typeLabel.contains("文件") -> Color(0xFF37C878)
@@ -651,6 +674,7 @@ private fun HookLogRow(log: HookLogRecord) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .clickable(onClick = onClick)
             .padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -720,6 +744,217 @@ private fun HookLogRow(log: HookLogRecord) {
         color = HookConfigDivider,
         thickness = 0.7.dp,
     )
+}
+
+@Composable
+private fun HookLogDetailPage(
+    log: HookLogRecord,
+    isLoading: Boolean,
+    onBackClick: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .hookConfigGradientBackground(),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            IconButton(onClick = onBackClick) {
+                Icon(
+                    imageVector = Icons.Outlined.ArrowBack,
+                    contentDescription = "返回",
+                    tint = LogTextPrimary,
+                )
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "日志详情",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = LogTextPrimary,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Text(
+                    text = log.title,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = LogTextSecondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            if (isLoading) {
+                CircularProgressIndicator(
+                    modifier = Modifier
+                        .padding(end = 12.dp)
+                        .size(20.dp),
+                    strokeWidth = 2.dp,
+                    color = HookConfigPrimaryBlue,
+                )
+            }
+        }
+
+        Box(modifier = Modifier.weight(1f)) {
+            SelectionContainer {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
+                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp),
+                ) {
+                    HookLogDetailSection(title = "基础信息") {
+                        HookLogDetailField("标题", log.title)
+                        HookLogDetailField("类型", log.typeLabel)
+                        HookLogDetailField("时间", log.time)
+                        HookLogDetailField("包名", log.packageName)
+                        HookLogDetailField("状态", if (log.status != null && log.status != 0) "失败(${log.status})" else "正常")
+                    }
+
+                    val parsedFields = remember(log.content) { parseHookLogFields(log.content) }
+                    if (parsedFields.isNotEmpty()) {
+                        HookLogDetailSection(title = "调用详情") {
+                            parsedFields.forEach { field ->
+                                HookLogDetailField(
+                                    label = normalizeHookLogFieldLabel(field.label),
+                                    value = field.value,
+                                )
+                            }
+                        }
+                    }
+
+                    HookLogDetailTextSection(
+                        title = "完整内容",
+                        text = log.content.ifBlank { "暂无内容" },
+                    )
+
+                    if (!log.exp.isNullOrBlank()) {
+                        HookLogDetailTextSection(
+                            title = "扩展信息",
+                            text = log.exp,
+                        )
+                    }
+
+                    if (log.stackTrace.isNotBlank()) {
+                        HookLogDetailTextSection(
+                            title = "调用堆栈",
+                            text = log.stackTrace,
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(20.dp))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun HookLogDetailSection(
+    title: String,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(9.dp),
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleSmall,
+            color = LogTextPrimary,
+            fontWeight = FontWeight.SemiBold,
+        )
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color.White.copy(alpha = 0.42f), RoundedCornerShape(8.dp))
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            content = content,
+        )
+    }
+}
+
+@Composable
+private fun HookLogDetailField(
+    label: String,
+    value: String,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            color = HookConfigMutedText,
+            fontWeight = FontWeight.Medium,
+        )
+        Text(
+            text = value.ifBlank { "-" },
+            style = MaterialTheme.typography.bodyMedium,
+            color = LogTextPrimary,
+        )
+    }
+}
+
+@Composable
+private fun HookLogDetailTextSection(
+    title: String,
+    text: String,
+) {
+    HookLogDetailSection(title = title) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodySmall,
+            color = LogTextPrimary,
+            fontFamily = FontFamily.Monospace,
+        )
+    }
+}
+
+private data class HookLogField(
+    val label: String,
+    val value: String,
+)
+
+private fun parseHookLogFields(content: String): List<HookLogField> {
+    return content
+        .lineSequence()
+        .mapNotNull { line ->
+            val trimmed = line.trim()
+            if (trimmed.isBlank()) return@mapNotNull null
+            val index = listOf(
+                trimmed.indexOf('：'),
+                trimmed.indexOf(':'),
+            ).filter { it > 0 }.minOrNull() ?: return@mapNotNull null
+            val label = trimmed.substring(0, index).trim()
+            val value = trimmed.substring(index + 1).trim()
+            if (label.isBlank()) null else HookLogField(label, value)
+        }
+        .toList()
+}
+
+private fun normalizeHookLogFieldLabel(label: String): String {
+    return when (label) {
+        "类名", "class", "className" -> "Class"
+        "方法名", "method", "methodName" -> "方法名"
+        "返回值类型", "returnType" -> "返回值类型"
+        "返回值", "returnValue" -> "返回值"
+        "替换值", "replacement", "replacementValue", "target" -> "替换值"
+        "algorithm" -> "摘要算法"
+        "transformation" -> "加解密算法"
+        "provider" -> "Provider"
+        "mode" -> "模式"
+        "key" -> "密钥"
+        "params", "参数签名" -> "参数/签名"
+        "inputHex" -> "输入 Hex"
+        "inputTextPreview" -> "输入预览"
+        "outputHex" -> "输出 Hex"
+        "outputTextPreview" -> "输出预览"
+        "errorType" -> "错误类型"
+        "errorMessage" -> "错误原因"
+        else -> label
+    }
 }
 
 @Composable

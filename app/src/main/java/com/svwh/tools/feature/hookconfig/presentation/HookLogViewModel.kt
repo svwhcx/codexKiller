@@ -24,6 +24,7 @@ internal data class HookLogUiState(
     val availableTypes: List<HookLogTypeOption> = emptyList(),
     val selectedTypes: Set<Int> = emptySet(),
     val selectedLog: HookLogRecord? = null,
+    val isLogDetailLoading: Boolean = false,
     val isRefreshing: Boolean = false,
     val isLoadingMore: Boolean = false,
     val hasMore: Boolean = true,
@@ -76,11 +77,41 @@ internal class HookLogViewModel @Inject constructor(
     }
 
     fun openLogDetail(log: HookLogRecord) {
-        _uiState.value = _uiState.value.copy(selectedLog = log)
+        val state = _uiState.value
+        _uiState.value = state.copy(
+            selectedLog = log,
+            isLogDetailLoading = true,
+            errorMessage = null,
+        )
+        viewModelScope.launch {
+            when (
+                val result = repository.queryLogDetail(
+                    envType = state.envType,
+                    packageName = state.packageName,
+                    id = log.id,
+                )
+            ) {
+                is AppResult.Success -> {
+                    _uiState.value = _uiState.value.copy(
+                        selectedLog = result.data ?: log,
+                        isLogDetailLoading = false,
+                    )
+                }
+                is AppResult.Failure -> {
+                    _uiState.value = _uiState.value.copy(
+                        isLogDetailLoading = false,
+                        errorMessage = result.error.toString(),
+                    )
+                }
+            }
+        }
     }
 
     fun dismissLogDetail() {
-        _uiState.value = _uiState.value.copy(selectedLog = null)
+        _uiState.value = _uiState.value.copy(
+            selectedLog = null,
+            isLogDetailLoading = false,
+        )
     }
 
     fun refresh() {

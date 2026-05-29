@@ -94,7 +94,7 @@ class ContentProviderHookLogRepository @Inject constructor(
             null,
             null,
         )
-        return cursor.useRecords()
+        return cursor.useRecords(fallbackPackageName = query.packageName)
             .filterByKeyword(query.keyword)
     }
 
@@ -112,7 +112,7 @@ class ContentProviderHookLogRepository @Inject constructor(
             null,
             null,
         )
-        return cursor.useRecords()
+        return cursor.useRecords(fallbackPackageName = query.packageName)
             .filterByKeyword(query.keyword)
     }
 
@@ -125,7 +125,7 @@ class ContentProviderHookLogRepository @Inject constructor(
             null,
             null,
         )
-        return cursor.useRecords().firstOrNull()
+        return cursor.useRecords(fallbackPackageName = packageName).firstOrNull()
     }
 
     private fun queryNoEnvDetail(packageName: String, id: Long): HookLogRecord? {
@@ -137,7 +137,7 @@ class ContentProviderHookLogRepository @Inject constructor(
             null,
             null,
         )
-        return cursor.useRecords().firstOrNull()
+        return cursor.useRecords(fallbackPackageName = packageName).firstOrNull()
     }
 
     private fun deleteWithEnvLogs(packageName: String) {
@@ -162,7 +162,7 @@ class ContentProviderHookLogRepository @Inject constructor(
         }
     }
 
-    private fun Cursor?.useRecords(): List<HookLogRecord> {
+    private fun Cursor?.useRecords(fallbackPackageName: String = ""): List<HookLogRecord> {
         if (this == null) return emptyList()
         return use { cursor ->
             buildList {
@@ -174,7 +174,7 @@ class ContentProviderHookLogRepository @Inject constructor(
                             time = cursor.stringValue("time"),
                             type = cursor.intValue("type"),
                             typeLabel = typeRegistry.titleOf(cursor.intValue("type")),
-                            packageName = cursor.stringValue("packageName"),
+                            packageName = cursor.stringValue("packageName").ifBlank { fallbackPackageName },
                             content = cursor.stringValue("content"),
                             stackTrace = cursor.stringValue("stackTrace"),
                             status = cursor.intValueOrNull("status"),

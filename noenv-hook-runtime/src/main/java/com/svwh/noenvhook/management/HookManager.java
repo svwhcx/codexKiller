@@ -66,6 +66,12 @@ public class HookManager {
                 return;
             }
             List<Member> targets = targetResolver.resolve(classLoader, hookConfig);
+            if (targets == null || targets.isEmpty()) {
+                throw new NoSuchMethodException(
+                        hookConfig.getClassName() + "#" + hookConfig.getMethodName()
+                                + "(" + hookConfig.getParams() + ")"
+                );
+            }
             for (Member target : targets) {
                 hookRegistrar.register(classLoader, target, hookConfig);
             }

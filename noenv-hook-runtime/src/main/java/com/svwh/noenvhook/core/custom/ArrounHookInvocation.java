@@ -43,6 +43,17 @@ public class ArrounHookInvocation extends LogInvocation {
                 contentBuilder.append("参数值：").append(arg).append("\n");
             }
         }
+        if (hookConfig.getChangeConfigs() != null && !hookConfig.getChangeConfigs().isEmpty()) {
+            for (int i = 0; i < hookConfig.getChangeConfigs().size(); i++) {
+                ChangeConfig changeConfig = hookConfig.getChangeConfigs().get(i);
+                contentBuilder.append("替换规则").append(i + 1).append("：")
+                        .append("paramNum=").append(changeConfig.getParamNum())
+                        .append(", target=").append(changeConfig.getTarget())
+                        .append(", replaceValue=").append(changeConfig.getReplaceValue())
+                        .append(", condition=").append(changeConfig.getCondition())
+                        .append("\n");
+            }
+        }
 
         Object resVal = null;
         if (!Boolean.TRUE.equals(hookConfig.getInterrupt())) {

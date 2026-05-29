@@ -36,6 +36,8 @@ public interface HookConfigTypeEnum {
 
     int USER_CERT_TRUST = 36;
 
+    int HOOK_FAILURE = 99;
+
     static boolean requiresTarget(int type) {
         switch (type) {
             case ASSETS:
