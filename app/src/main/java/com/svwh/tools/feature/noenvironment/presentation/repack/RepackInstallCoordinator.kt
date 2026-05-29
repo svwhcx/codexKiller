@@ -1,5 +1,6 @@
 package com.svwh.tools.feature.noenvironment.presentation.repack
 
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageInfo
@@ -55,11 +56,31 @@ import com.svwh.tools.feature.noenvironment.domain.model.RepackProgressState
 import java.io.File
 
 @Composable
-fun rememberRepackInstallCoordinator(): RepackInstallCoordinator {
+fun rememberRepackInstallCoordinator(
+    onInstallSucceeded: (String) -> Unit = {},
+): RepackInstallCoordinator {
     val context = LocalContext.current
     var pendingState by remember { mutableStateOf<RepackProgressState?>(null) }
     var showInstallPermissionDialog by remember { mutableStateOf(false) }
     var signatureMismatchState by remember { mutableStateOf<RepackProgressState?>(null) }
+    var installStartedAtMillis by remember { mutableStateOf(0L) }
+
+    val installLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult(),
+    ) { result ->
+        val state = pendingState
+        val installedAfterLaunch = state != null &&
+            context.isPackageInstalled(state.packageName) &&
+            context.getPackageLastUpdateTime(state.packageName) >= installStartedAtMillis
+        val installerReportedSuccess = result.resultCode == Activity.RESULT_OK
+        if (state != null && context.isPackageInstalled(state.packageName) && (installerReportedSuccess || installedAfterLaunch)) {
+            onInstallSucceeded(state.packageName)
+            pendingState = null
+            Toast.makeText(context, "安装成功", Toast.LENGTH_SHORT).show()
+        } else if (state != null && result.resultCode == Activity.RESULT_CANCELED) {
+            Toast.makeText(context, "安装未完成", Toast.LENGTH_SHORT).show()
+        }
+    }
 
     val installPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult(),
@@ -69,8 +90,8 @@ fun rememberRepackInstallCoordinator(): RepackInstallCoordinator {
             if (context.hasDifferentInstalledSignature(state)) {
                 signatureMismatchState = state
             } else {
-                context.launchInstallFlow(state)
-                pendingState = null
+                installStartedAtMillis = System.currentTimeMillis()
+                context.launchInstallFlow(state, installLauncher::launch)
             }
         } else if (state != null) {
             Toast.makeText(context, "未授予安装未知应用权限", Toast.LENGTH_SHORT).show()
@@ -85,8 +106,12 @@ fun rememberRepackInstallCoordinator(): RepackInstallCoordinator {
             if (context.isPackageInstalled(state.packageName)) {
                 Toast.makeText(context, "原应用仍未卸载，无法覆盖安装", Toast.LENGTH_SHORT).show()
             } else {
-                context.launchInstallFlow(state, skipSignatureCheck = true)
-                pendingState = null
+                installStartedAtMillis = System.currentTimeMillis()
+                context.launchInstallFlow(
+                    state = state,
+                    installLauncher = installLauncher::launch,
+                    skipSignatureCheck = true,
+                )
             }
         }
     }
@@ -149,8 +174,8 @@ fun rememberRepackInstallCoordinator(): RepackInstallCoordinator {
                         signatureMismatchState = state
                     }
                     else -> {
-                        context.launchInstallFlow(state)
-                        pendingState = null
+                        installStartedAtMillis = System.currentTimeMillis()
+                        context.launchInstallFlow(state, installLauncher::launch)
                     }
                 }
             },
@@ -192,7 +217,7 @@ private fun Context.launchUninstallFlow(
         return
     }
     if (!isPackageInstalled(state.packageName)) {
-        launchInstallFlow(state, skipSignatureCheck = true)
+        Toast.makeText(this, "原应用已卸载，请重新点击安装", Toast.LENGTH_SHORT).show()
         onFailed()
         return
     }
@@ -222,6 +247,7 @@ private fun Context.launchUninstallFlow(
 
 private fun Context.launchInstallFlow(
     state: RepackProgressState,
+    installLauncher: (Intent) -> Unit,
     skipSignatureCheck: Boolean = false,
 ) {
     val apkFile = File(state.outputApkPath)
@@ -241,11 +267,10 @@ private fun Context.launchInstallFlow(
     )
     val intent = Intent(Intent.ACTION_VIEW).apply {
         setDataAndType(apkUri, "application/vnd.android.package-archive")
-        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         putExtra(Intent.EXTRA_NOT_UNKNOWN_SOURCE, true)
     }
-    runCatching { startActivity(intent) }
+    runCatching { installLauncher(intent) }
         .onFailure {
             Toast.makeText(this, "无法打开系统安装器", Toast.LENGTH_SHORT).show()
         }
@@ -285,6 +310,11 @@ private fun PackageManager.getInstalledPackageInfo(packageName: String): Package
 private fun Context.isPackageInstalled(packageName: String): Boolean {
     if (packageName.isBlank()) return false
     return packageManager.getInstalledPackageInfo(packageName) != null
+}
+
+private fun Context.getPackageLastUpdateTime(packageName: String): Long {
+    if (packageName.isBlank()) return 0L
+    return packageManager.getInstalledPackageInfo(packageName)?.lastUpdateTime ?: 0L
 }
 
 private fun PackageInfo.signatureBytes(): List<ByteArraySignature> {

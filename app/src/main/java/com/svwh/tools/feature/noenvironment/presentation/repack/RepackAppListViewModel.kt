@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.svwh.tools.feature.environment.domain.model.InstalledAppItem
 import com.svwh.tools.feature.environment.domain.repository.InstalledAppRepository
 import com.svwh.tools.feature.noenvironment.domain.model.RepackProgressState
+import com.svwh.tools.feature.noenvironment.domain.repack.RepackInstallEventStore
 import com.svwh.tools.feature.noenvironment.domain.repack.RepackProgressController
 import com.svwh.tools.feature.noenvironment.domain.repack.RepackWorkflowRunner
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -43,6 +44,7 @@ data class RepackAppListUiState(
 @HiltViewModel
 class RepackAppListViewModel @Inject constructor(
     private val installedAppRepository: InstalledAppRepository,
+    private val repackInstallEventStore: RepackInstallEventStore,
     private val repackProgressController: RepackProgressController,
     private val repackWorkflowRunner: RepackWorkflowRunner,
 ) : ViewModel() {
@@ -71,6 +73,15 @@ class RepackAppListViewModel @Inject constructor(
 
     fun dismissRepackProgress() {
         repackProgressController.dismiss()
+    }
+
+    fun onInstallSucceeded(packageName: String) {
+        repackInstallEventStore.markInstalled(packageName)
+        _uiState.update { state ->
+            state.copy(
+                apps = state.apps.filterNot { app -> app.packageName == packageName },
+            )
+        }
     }
 
     fun stopRepackProgress() {

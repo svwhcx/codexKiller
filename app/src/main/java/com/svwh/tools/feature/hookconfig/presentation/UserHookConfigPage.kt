@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.padding
@@ -138,6 +139,8 @@ private val RuleHeaderActionHeight = 34.dp
 private val UserConfigSwitchWidth = 46.dp
 private val UserConfigSwitchHeight = 27.dp
 private val UserConfigSwitchThumbSize = 23.dp
+private val UserConfigListItemMinHeight = 74.dp
+private val UserConfigListActionSlotSize = 48.dp
 
 private data class RuleOption(
     val label: String,
@@ -384,8 +387,9 @@ private fun UserConfigListItem(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .heightIn(min = UserConfigListItemMinHeight)
             .combinedClickable(onClick = onClick, onLongClick = onLongClick)
-            .padding(horizontal = 16.dp, vertical = 13.dp),
+            .padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(
@@ -411,16 +415,21 @@ private fun UserConfigListItem(
 
         Spacer(modifier = Modifier.width(12.dp))
 
-        if (selectionMode) {
-            Checkbox(
-                checked = checked,
-                onCheckedChange = { onCheckedChange() },
-            )
-        } else {
-            UserConfigSwitch(
-                checked = item.enabled,
-                onCheckedChange = { onEnabledChange() },
-            )
+        Box(
+            modifier = Modifier.size(UserConfigListActionSlotSize),
+            contentAlignment = Alignment.Center,
+        ) {
+            if (selectionMode) {
+                Checkbox(
+                    checked = checked,
+                    onCheckedChange = { onCheckedChange() },
+                )
+            } else {
+                UserConfigSwitch(
+                    checked = item.enabled,
+                    onCheckedChange = { onEnabledChange() },
+                )
+            }
         }
     }
 }

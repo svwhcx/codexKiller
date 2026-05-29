@@ -1,5 +1,10 @@
 package com.svwh.tools.feature.hookconfig.presentation
 
+import android.content.ActivityNotFoundException
+import android.content.Context
+import android.content.Intent
+import android.widget.Toast
+
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -42,6 +47,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -92,6 +98,7 @@ fun HookConfigRoute(
     val pagerState = rememberPagerState(pageCount = { tabs.size })
     val coroutineScope = rememberCoroutineScope()
     val displayName = appName.ifBlank { packageName }
+    val context = LocalContext.current
 
     Scaffold(
         modifier = modifier
@@ -111,6 +118,7 @@ fun HookConfigRoute(
                         pagerState.scrollToPage(index)
                     }
                 },
+                onLaunchApp = { context.launchTargetApp(packageName) },
             )
         },
     ) { paddingValues ->
@@ -173,6 +181,7 @@ private fun HookConfigHeader(
     selectedIndex: Int,
     onBackClick: () -> Unit,
     onTabClick: (Int) -> Unit,
+    onLaunchApp: () -> Unit,
 ) {
     Surface(
         color = Color.Transparent,
@@ -246,7 +255,10 @@ private fun HookConfigHeader(
                         ) {
                             DropdownMenuItem(
                                 text = { Text("启动") },
-                                onClick = { menuExpanded = false },
+                                onClick = {
+                                    menuExpanded = false
+                                    onLaunchApp()
+                                },
                                 leadingIcon = { Icon(Icons.Outlined.PlayArrow, contentDescription = null) },
                                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                             )
@@ -333,5 +345,33 @@ private fun HookConfigTabs(
                 )
             }
         }
+    }
+}
+
+private fun Context.launchTargetApp(packageName: String) {
+    if (packageName.isBlank()) {
+        Toast.makeText(this, "无法识别目标应用", Toast.LENGTH_SHORT).show()
+        return
+    }
+
+    val launchIntent = packageManager.getLaunchIntentForPackage(packageName)
+    if (launchIntent == null) {
+        Toast.makeText(this, "目标应用没有可启动入口", Toast.LENGTH_SHORT).show()
+        return
+    }
+
+    runCatching {
+        startActivity(
+            launchIntent.apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            },
+        )
+    }.onFailure { throwable ->
+        val message = when (throwable) {
+            is SecurityException -> "没有权限启动目标应用"
+            is ActivityNotFoundException -> "目标应用无法启动"
+            else -> throwable.message ?: "启动目标应用失败"
+        }
+        Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
     }
 }

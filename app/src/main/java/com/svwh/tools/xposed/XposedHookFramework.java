@@ -25,12 +25,20 @@ final class XposedHookFramework implements HookFramework {
         XposedBridge.hookMethod(target, new XC_MethodHook() {
             @Override
             protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
-                callback.beforeCall(new XposedCallFrame(param));
+                try {
+                    callback.beforeCall(new XposedCallFrame(param));
+                } catch (Throwable throwable) {
+                    bridge.log(throwable);
+                }
             }
 
             @Override
             protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-                callback.afterCall(new XposedCallFrame(param));
+                try {
+                    callback.afterCall(new XposedCallFrame(param));
+                } catch (Throwable throwable) {
+                    bridge.log(throwable);
+                }
             }
         });
     }
@@ -40,7 +48,13 @@ final class XposedHookFramework implements HookFramework {
         XposedBridge.hookMethod(target, new XC_MethodReplacement() {
             @Override
             protected Object replaceHookedMethod(MethodHookParam param) throws Throwable {
-                return invocation.replaceMethodHook(new XposedCallFrame(param));
+                XposedCallFrame hookCallFrame = new XposedCallFrame(param);
+                try {
+                    return invocation.replaceMethodHook(hookCallFrame);
+                } catch (Throwable throwable) {
+                    bridge.log(throwable);
+                    return hookCallFrame.invokeOriginal();
+                }
             }
         });
     }

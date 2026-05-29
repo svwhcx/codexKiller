@@ -19,32 +19,36 @@ public class HookRegistrationFailureReporter {
         this.runtimeLogger = runtimeLogger;
     }
 
-    public void report(HookConfig hookConfig, Exception e) {
-        runtimeLogger.error(
-                "注册 Hook 失败：" + hookConfig.getClassName() + "#" + hookConfig.getMethodName(),
-                e
-        );
+    public void report(HookConfig hookConfig, Throwable e) {
+        try {
+            runtimeLogger.error(
+                    "Hook registration failed: " + safeValue(hookConfig.getClassName()) + "#" + safeValue(hookConfig.getMethodName()),
+                    e
+            );
 
-        Log log = new Log();
-        log.setTitle("Hook 注册失败");
-        log.setType(HookConfigTypeEnum.HOOK_FAILURE);
-        log.setStatus(1);
-        log.setTime(LocalDateTime.now().toString());
-        log.setContent(
-                "className: " + safeValue(hookConfig.getClassName()) + "\n"
-                        + "methodName: " + safeValue(hookConfig.getMethodName()) + "\n"
-                        + "params: " + safeValue(hookConfig.getParams()) + "\n"
-                        + "methodSignature: " + methodSignatureOf(hookConfig) + "\n"
-                        + "configName: " + safeValue(hookConfig.getConfigName()) + "\n"
-                        + "hookType: " + hookConfig.getType() + "\n"
-                        + "errorType: " + e.getClass().getName() + "\n"
-                        + "errorMessage: " + safeMessage(e) + "\n"
-        );
-        log.setExp(stackTraceOf(e));
-        logWriter.save(log);
+            Log log = new Log();
+            log.setTitle("Hook registration failed");
+            log.setType(HookConfigTypeEnum.HOOK_FAILURE);
+            log.setStatus(1);
+            log.setTime(LocalDateTime.now().toString());
+            log.setContent(
+                    "className: " + safeValue(hookConfig.getClassName()) + "\n"
+                            + "methodName: " + safeValue(hookConfig.getMethodName()) + "\n"
+                            + "params: " + safeValue(hookConfig.getParams()) + "\n"
+                            + "methodSignature: " + methodSignatureOf(hookConfig) + "\n"
+                            + "configName: " + safeValue(hookConfig.getConfigName()) + "\n"
+                            + "hookType: " + hookConfig.getType() + "\n"
+                            + "errorType: " + e.getClass().getName() + "\n"
+                            + "errorMessage: " + safeMessage(e) + "\n"
+            );
+            log.setExp(stackTraceOf(e));
+            logWriter.save(log);
+        } catch (Throwable reportError) {
+            runtimeLogger.error("Hook registration failure report failed", reportError);
+        }
     }
 
-    private String safeMessage(Exception e) {
+    private String safeMessage(Throwable e) {
         String message = e.getMessage();
         return message == null || message.isEmpty() ? e.getClass().getSimpleName() : message;
     }
@@ -62,7 +66,7 @@ public class HookRegistrationFailureReporter {
                 + ")";
     }
 
-    private String stackTraceOf(Exception e) {
+    private String stackTraceOf(Throwable e) {
         StringWriter stringWriter = new StringWriter();
         PrintWriter printWriter = new PrintWriter(stringWriter);
         e.printStackTrace(printWriter);

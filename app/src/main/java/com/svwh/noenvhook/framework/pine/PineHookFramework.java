@@ -27,13 +27,21 @@ public class PineHookFramework implements HookFramework {
             @Override
             public void beforeCall(Pine.CallFrame callFrame) throws Throwable {
                 super.beforeCall(callFrame);
-                callback.beforeCall(new PineCallFrame(callFrame));
+                try {
+                    callback.beforeCall(new PineCallFrame(callFrame));
+                } catch (Throwable throwable) {
+                    bridge.log(throwable);
+                }
             }
 
             @Override
             public void afterCall(Pine.CallFrame callFrame) throws Throwable {
                 super.afterCall(callFrame);
-                callback.afterCall(new PineCallFrame(callFrame));
+                try {
+                    callback.afterCall(new PineCallFrame(callFrame));
+                } catch (Throwable throwable) {
+                    bridge.log(throwable);
+                }
             }
         });
     }
@@ -43,7 +51,13 @@ public class PineHookFramework implements HookFramework {
         Pine.hook(target, new MethodReplacement() {
             @Override
             protected Object replaceCall(Pine.CallFrame callFrame) throws Throwable {
-                return invocation.replaceMethodHook(new PineCallFrame(callFrame));
+                PineCallFrame hookCallFrame = new PineCallFrame(callFrame);
+                try {
+                    return invocation.replaceMethodHook(hookCallFrame);
+                } catch (Throwable throwable) {
+                    bridge.log(throwable);
+                    return hookCallFrame.invokeOriginal();
+                }
             }
         });
     }

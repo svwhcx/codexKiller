@@ -75,7 +75,9 @@ fun RepackAppListRoute(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val repackProgressState by viewModel.repackProgressState.collectAsStateWithLifecycle()
-    val installCoordinator = rememberRepackInstallCoordinator()
+    val installCoordinator = rememberRepackInstallCoordinator(
+        onInstallSucceeded = viewModel::onInstallSucceeded,
+    )
     var showRepackDetails by remember { mutableStateOf(false) }
 
     Box(modifier = Modifier.fillMaxSize()) {

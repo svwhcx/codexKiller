@@ -8,6 +8,7 @@ import com.svwh.tools.constant.ApkConstant
 import com.svwh.tools.feature.environment.domain.model.InstalledAppItem
 import com.svwh.tools.feature.environment.domain.repository.InstalledAppRepository
 import com.svwh.tools.feature.environment.domain.repository.InstalledAppMetaDataFilter
+import com.svwh.tools.feature.noenvironment.domain.repack.RepackInstallEventStore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
@@ -45,6 +46,7 @@ data class NoEnvironmentUiState(
 class NoEnvironmentViewModel @Inject constructor(
     private val installedAppRepository: InstalledAppRepository,
     private val hookStateRepository: HookStateRepository,
+    private val repackInstallEventStore: RepackInstallEventStore,
 ) : ViewModel() {
     private var loadAppsJob: Job? = null
 
@@ -53,6 +55,7 @@ class NoEnvironmentViewModel @Inject constructor(
 
     init {
         loadUserApps()
+        observeRepackInstallEvents()
     }
 
     fun setSearchQuery(query: String) {
@@ -120,5 +123,59 @@ class NoEnvironmentViewModel @Inject constructor(
                 )
             }
         }
+    }
+
+    private fun observeRepackInstallEvents() {
+        viewModelScope.launch {
+            repackInstallEventStore.installedPackages
+                .collect { packageNames ->
+                    packageNames.forEach { packageName ->
+                        addInstalledRepackApp(packageName)
+                    }
+                }
+        }
+    }
+
+    private fun addInstalledRepackApp(packageName: String) {
+        viewModelScope.launch {
+            var app: InstalledAppItem? = null
+            for (attempt in 0 until 4) {
+                app = withContext(Dispatchers.IO) {
+                    loadNoEnvironmentApp(packageName)
+                }
+                if (app != null) break
+                if (attempt < 3) delay(300)
+            }
+            val installedApp = app
+            if (installedApp != null) {
+                _uiState.update { state ->
+                    val withoutOld = state.apps.filterNot { it.packageName == packageName }
+                    state.copy(
+                        apps = (withoutOld + installedApp).sortedWith(
+                            compareByDescending<InstalledAppItem> { it.hookEnabled }
+                                .thenByDescending { it.firstInstallTimeMillis },
+                        ),
+                    )
+                }
+                repackInstallEventStore.consume(packageName)
+            }
+        }
+    }
+
+    private suspend fun loadNoEnvironmentApp(packageName: String): InstalledAppItem? {
+        val loadedApps = installedAppRepository.getInstalledApps(
+            showSystemApps = false,
+            hookedPackages = emptySet(),
+            requiredMetaData = InstalledAppMetaDataFilter(
+                name = ApkConstant.NO_ENV_METADATA_NAME,
+                value = ApkConstant.NO_ENV_METADATA_VALUE,
+            ),
+        )
+        val app = loadedApps.firstOrNull { it.packageName == packageName } ?: return null
+        val enabledPackages = hookStateRepository.syncAndGetEnabledPackages(
+            environmentType = HookEnvironmentType.NoEnv,
+            packageNames = setOf(packageName),
+        )
+        return app.copy(hookEnabled = packageName in enabledPackages)
     }
 }

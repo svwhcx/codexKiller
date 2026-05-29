@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -78,6 +79,7 @@ private val LogTextPrimary = Color(0xFF2F3747)
 private val LogTextSecondary = Color(0xFF6C768A)
 private val LogControlCornerRadius = 10.dp
 private val LogSheetScrim = Color(0x66000000)
+private val HookLogListItemMinHeight = 92.dp
 private val LogSheetBorder = Color(0xFFE8EDF5)
 private val LogSheetButtonBg = Color(0xFFF6F8FC)
 private val LogSheetIconBg = Color(0xFFF8FAFF)
@@ -674,6 +676,7 @@ private fun HookLogRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .heightIn(min = HookLogListItemMinHeight)
             .clickable(onClick = onClick)
             .padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -727,15 +730,13 @@ private fun HookLogRow(
                 HookLogMetaText(label = "类型：", value = log.typeLabel)
                 HookLogMetaText(label = "包名：", value = log.packageName)
             }
-            if (log.content.isNotBlank()) {
-                Text(
-                    text = log.content.replace('\n', ' '),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = LogTextSecondary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
+            Text(
+                text = log.content.replace('\n', ' ').ifBlank { " " },
+                style = MaterialTheme.typography.bodySmall,
+                color = LogTextSecondary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
     }
 

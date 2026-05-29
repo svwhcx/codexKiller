@@ -145,6 +145,8 @@ private const val TEXT_FORMAT = "格式化"
 private val FridaSwitchWidth = 46.dp
 private val FridaSwitchHeight = 27.dp
 private val FridaSwitchThumbSize = 23.dp
+private val FridaListItemMinHeight = 74.dp
+private val FridaListActionSlotSize = 48.dp
 private val FridaEditorHorizontalScrollbarHeight = 12.dp
 private val FridaSuggestionRowHeight = 36.dp
 private val FridaSuggestionPopupVerticalPadding = 8.dp
@@ -440,8 +442,9 @@ private fun FridaScriptListItem(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .heightIn(min = FridaListItemMinHeight)
             .combinedClickable(onClick = onClick, onLongClick = onLongClick)
-            .padding(horizontal = 16.dp, vertical = 13.dp),
+            .padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(
@@ -465,16 +468,21 @@ private fun FridaScriptListItem(
             )
         }
         Spacer(modifier = Modifier.width(12.dp))
-        if (selectionMode) {
-            Checkbox(
-                checked = checked,
-                onCheckedChange = { onCheckedChange() },
-            )
-        } else {
-            FridaSwitch(
-                checked = item.enabled,
-                onCheckedChange = { onEnabledChange() },
-            )
+        Box(
+            modifier = Modifier.size(FridaListActionSlotSize),
+            contentAlignment = Alignment.Center,
+        ) {
+            if (selectionMode) {
+                Checkbox(
+                    checked = checked,
+                    onCheckedChange = { onCheckedChange() },
+                )
+            } else {
+                FridaSwitch(
+                    checked = item.enabled,
+                    onCheckedChange = { onEnabledChange() },
+                )
+            }
         }
     }
 }

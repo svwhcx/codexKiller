@@ -66,21 +66,26 @@ public final class HookRuntime {
     }
 
     public boolean start(Context context) {
-        runtimeLogger.info("Start Hook Runtime, envType=" + envType);
-        if (!RuntimeState.isHookEnabled(context, envType)) {
-            runtimeLogger.info("Hook enable file not found, skip registration, envType=" + envType);
+        try {
+            runtimeLogger.info("Start Hook Runtime, envType=" + envType);
+            if (!RuntimeState.isHookEnabled(context, envType)) {
+                runtimeLogger.info("Hook enable file not found, skip registration, envType=" + envType);
+                return false;
+            }
+
+            List<HookConfig> hookConfigs = configService.queryHookConfig(context);
+            if (hookConfigs == null || hookConfigs.isEmpty()) {
+                runtimeLogger.info("No Hook config found, envType=" + envType);
+                return true;
+            }
+
+            resolveHookManager(context).registerHooks(context.getClassLoader(), hookConfigs);
+            runtimeLogger.info("Hook Runtime started, envType=" + envType + ", configCount=" + hookConfigs.size());
+            return true;
+        } catch (Throwable throwable) {
+            runtimeLogger.error("Hook Runtime startup failed, envType=" + envType, throwable);
             return false;
         }
-
-        List<HookConfig> hookConfigs = configService.queryHookConfig(context);
-        if (hookConfigs == null || hookConfigs.isEmpty()) {
-            runtimeLogger.info("No Hook config found, envType=" + envType);
-            return true;
-        }
-
-        resolveHookManager(context).registerHooks(context.getClassLoader(), hookConfigs);
-        runtimeLogger.info("Hook Runtime started, envType=" + envType + ", configCount=" + hookConfigs.size());
-        return true;
     }
 
     private HookManager resolveHookManager(Context context) {

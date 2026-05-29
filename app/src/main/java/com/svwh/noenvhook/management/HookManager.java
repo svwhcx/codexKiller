@@ -75,7 +75,7 @@ public class HookManager {
             for (Member target : targets) {
                 hookRegistrar.register(classLoader, target, hookConfig);
             }
-        } catch (Exception e) {
+        } catch (Throwable e) {
             failureReporter.report(hookConfig, e);
         }
     }
