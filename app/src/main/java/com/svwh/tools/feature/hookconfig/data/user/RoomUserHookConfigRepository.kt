@@ -27,25 +27,25 @@ class RoomUserHookConfigRepository @Inject constructor(
     ): AppResult<List<UserHookConfigItem>> = withContext(Dispatchers.IO) {
         runCatching {
             AppResult.Success(
+                userHookConfigDao.getUserConfigsWithRules(
+                    packageName = packageName,
+                    envType = envType,
+                    type = CUSTOM_HOOK_TYPE,
+                ).mapToItems(),
+            )
+        }.getOrElse { AppResult.Failure(AppError.Unknown(it)) }
+    }
+
+    override suspend fun getRuntimeConfigs(
+        envType: String,
+        packageName: String,
+    ): AppResult<List<UserHookConfigItem>> = withContext(Dispatchers.IO) {
+        runCatching {
+            AppResult.Success(
                 userHookConfigDao.getConfigsWithRules(
                     packageName = packageName,
                     envType = envType,
-                ).map { relation ->
-                    UserHookConfigItem(
-                        id = relation.config.id,
-                        packageName = relation.config.packageName,
-                        envType = relation.config.envType,
-                        configName = relation.config.configName,
-                        className = relation.config.className,
-                        methodName = relation.config.methodName,
-                        params = relation.config.params,
-                        type = relation.config.type,
-                        enabled = relation.config.enabled,
-                        isLog = relation.config.isLog,
-                        isInterrupted = relation.config.isInterrupted,
-                        ruleCount = relation.rules.size,
-                    )
-                },
+                ).mapToItems(),
             )
         }.getOrElse { AppResult.Failure(AppError.Unknown(it)) }
     }
@@ -200,5 +200,28 @@ class RoomUserHookConfigRepository @Inject constructor(
                 )
             },
         )
+    }
+
+    private fun List<UserHookConfigWithRules>.mapToItems(): List<UserHookConfigItem> {
+        return map { relation ->
+            UserHookConfigItem(
+                id = relation.config.id,
+                packageName = relation.config.packageName,
+                envType = relation.config.envType,
+                configName = relation.config.configName,
+                className = relation.config.className,
+                methodName = relation.config.methodName,
+                params = relation.config.params,
+                type = relation.config.type,
+                enabled = relation.config.enabled,
+                isLog = relation.config.isLog,
+                isInterrupted = relation.config.isInterrupted,
+                ruleCount = relation.rules.size,
+            )
+        }
+    }
+
+    private companion object {
+        const val CUSTOM_HOOK_TYPE = "0"
     }
 }

@@ -6,6 +6,7 @@ import android.os.Environment
 import com.svwh.tools.core.database.dao.UserHookConfigDao
 import com.svwh.tools.core.database.dao.UserHookConfigWithRules
 import java.io.File
+import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.Dispatchers
@@ -37,10 +38,14 @@ class NoEnvHookConfigExporter @Inject constructor(
         configs: List<UserHookConfigWithRules>,
     ) {
         val dbFile = runtimeDatabaseFile(packageName)
-        dbFile.parentFile?.mkdirs()
+        ensureRuntimeDatabaseFile(dbFile)
         val runtimeEnvType = envType.toRuntimeEnvType()
 
-        SQLiteDatabase.openOrCreateDatabase(dbFile, null).use { db ->
+        SQLiteDatabase.openDatabase(
+            dbFile.absolutePath,
+            null,
+            SQLiteDatabase.OPEN_READWRITE or SQLiteDatabase.CREATE_IF_NECESSARY,
+        ).use { db ->
             db.beginTransaction()
             try {
                 ensureSchema(db)
@@ -82,6 +87,20 @@ class NoEnvHookConfigExporter @Inject constructor(
             } finally {
                 db.endTransaction()
             }
+        }
+    }
+
+    private fun ensureRuntimeDatabaseFile(dbFile: File) {
+        val parent = dbFile.parentFile
+            ?: throw IOException("Runtime database parent directory is missing: ${dbFile.absolutePath}")
+        if (!parent.exists() && !parent.mkdirs()) {
+            throw IOException("Cannot create runtime database directory: ${parent.absolutePath}")
+        }
+        if (!parent.isDirectory) {
+            throw IOException("Runtime database parent is not a directory: ${parent.absolutePath}")
+        }
+        if (!dbFile.exists() && !dbFile.createNewFile()) {
+            throw IOException("Cannot create runtime database file: ${dbFile.absolutePath}")
         }
     }
 

@@ -10,6 +10,11 @@ interface UserHookConfigRepository {
         packageName: String,
     ): AppResult<List<UserHookConfigItem>>
 
+    suspend fun getRuntimeConfigs(
+        envType: String,
+        packageName: String,
+    ): AppResult<List<UserHookConfigItem>>
+
     suspend fun getConfigById(id: Long): AppResult<UserHookConfigDraft?>
 
     suspend fun saveConfig(draft: UserHookConfigDraft): AppResult<Long>

@@ -41,6 +41,22 @@ interface UserHookConfigDao {
     @Query(
         """
         SELECT * FROM user_hook_configs
+        WHERE packageName = :packageName
+          AND envType = :envType
+          AND (type = :type OR type = '')
+        ORDER BY updatedAtMillis DESC, id DESC
+        """,
+    )
+    suspend fun getUserConfigsWithRules(
+        packageName: String,
+        envType: String,
+        type: String,
+    ): List<UserHookConfigWithRules>
+
+    @Transaction
+    @Query(
+        """
+        SELECT * FROM user_hook_configs
         WHERE id = :id
         LIMIT 1
         """,

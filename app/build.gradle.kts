@@ -101,6 +101,8 @@ dependencies {
     implementation(libs.coil.network.okhttp)
     implementation(libs.apksig)
     implementation(libs.multidexlib2)
+    implementation(libs.pine.core)
+    compileOnly(project(":xposed-api-stubs"))
 
     testImplementation(libs.junit)
     testImplementation(libs.mockk)

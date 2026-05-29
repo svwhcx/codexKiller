@@ -107,7 +107,7 @@ internal class QuickConfigViewModel @Inject constructor(
     }
 
     private suspend fun loadConfigs(envType: String, packageName: String): List<UserHookConfigItem> {
-        return when (val result = repository.getConfigs(envType, packageName)) {
+        return when (val result = repository.getRuntimeConfigs(envType, packageName)) {
             is AppResult.Success -> result.data
             is AppResult.Failure -> emptyList()
         }

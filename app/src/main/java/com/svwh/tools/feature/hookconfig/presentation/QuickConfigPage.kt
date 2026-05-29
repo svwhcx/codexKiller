@@ -38,6 +38,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.svwh.tools.core.permission.rememberExternalStoragePermissionGate
 import com.svwh.tools.feature.environment.presentation.HookSwitch
 
 private val QuickConfigGroupIconBackground = Color(0xFFEAF3FF)
@@ -52,6 +53,7 @@ internal fun QuickConfigPage(
 ) {
     val groups = remember { defaultQuickConfigGroups() }
     val uiState by viewModel.uiState.collectAsState()
+    val storagePermissionGate = rememberExternalStoragePermissionGate()
 
     LaunchedEffect(envType, packageName) {
         viewModel.initialize(
@@ -69,7 +71,11 @@ internal fun QuickConfigPage(
             QuickConfigGroupSection(
                 group = group,
                 uiState = uiState,
-                onCheckedChange = viewModel::updateQuickConfig,
+                onCheckedChange = { item, enabled ->
+                    storagePermissionGate.runAfterPermission {
+                        viewModel.updateQuickConfig(item, enabled)
+                    }
+                },
             )
         }
     }

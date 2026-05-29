@@ -81,6 +81,7 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import com.svwh.tools.core.permission.rememberExternalStoragePermissionGate
 import com.svwh.tools.feature.hookconfig.domain.model.UserHookConfigDraft
 import com.svwh.tools.feature.hookconfig.domain.model.UserHookConfigItem
 import com.svwh.tools.feature.hookconfig.domain.model.UserHookConfigRule
@@ -166,6 +167,7 @@ internal fun UserHookConfigPage(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val lifecycleOwner = LocalLifecycleOwner.current
+    val storagePermissionGate = rememberExternalStoragePermissionGate()
 
     LaunchedEffect(envType, packageName) {
         viewModel.initialize(envType = envType, packageName = packageName)
@@ -220,7 +222,11 @@ internal fun UserHookConfigPage(
                             },
                             onLongClick = { viewModel.enterSelectionMode(item.id) },
                             onCheckedChange = { viewModel.toggleSelection(item.id) },
-                            onEnabledChange = { viewModel.toggleEnabled(item) },
+                            onEnabledChange = {
+                                storagePermissionGate.runAfterPermission {
+                                    viewModel.toggleEnabled(item)
+                                }
+                            },
                         )
                         if (index != uiState.items.lastIndex) {
                             HorizontalDivider(
@@ -263,7 +269,11 @@ internal fun UserHookConfigPage(
                     SelectionActionButton(
                         text = TEXT_DELETE,
                         icon = Icons.Outlined.DeleteOutline,
-                        onClick = viewModel::deleteSelected,
+                        onClick = {
+                            storagePermissionGate.runAfterPermission {
+                                viewModel.deleteSelected()
+                            }
+                        },
                         modifier = Modifier.weight(1f),
                         contentColor = UserConfigDeleteRed,
                     )
@@ -317,6 +327,7 @@ internal fun UserHookConfigEditorRoute(
     viewModel: UserHookConfigViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val storagePermissionGate = rememberExternalStoragePermissionGate()
 
     LaunchedEffect(envType, packageName) {
         viewModel.initialize(envType = envType, packageName = packageName)
@@ -347,7 +358,11 @@ internal fun UserHookConfigEditorRoute(
             viewModel.closeEditor()
             onBackClick()
         },
-        onSave = viewModel::saveDraft,
+        onSave = {
+            storagePermissionGate.runAfterPermission {
+                viewModel.saveDraft()
+            }
+        },
         onDraftChange = viewModel::updateDraft,
         onAddRule = viewModel::addRule,
         onRemoveRule = viewModel::removeRule,

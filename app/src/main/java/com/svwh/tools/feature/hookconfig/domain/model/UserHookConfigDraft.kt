@@ -15,6 +15,6 @@ data class UserHookConfigDraft(
     val isInterrupted: Boolean = false,
     val enabled: Boolean = true,
     val exp: String = "",
-    val type: String = "",
+    val type: String = "0",
     val rules: List<UserHookConfigRule> = emptyList(),
 )

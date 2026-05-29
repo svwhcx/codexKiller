@@ -8,3 +8,9 @@
 -keep class org.jf.dexlib2.** { *; }
 -keep class lanchon.multidexlib2.** { *; }
 -keep class com.google.common.io.ByteStreamsHack { *; }
+
+# LSPosed discovers the module entry from assets/xposed_init, outside normal
+# bytecode references, so keep the entry and shared runtime API stable.
+-keep class com.svwh.tools.xposed.** { *; }
+-keep class com.svwh.noenvhook.** { *; }
+-keep class de.robv.android.xposed.** { *; }

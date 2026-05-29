@@ -2,7 +2,9 @@ package com.svwh.tools.feature.hookconfig.data.log
 
 import android.content.Context
 import android.database.Cursor
+import android.database.sqlite.SQLiteDatabase
 import android.net.Uri
+import android.os.Environment
 import com.svwh.tools.core.common.AppError
 import com.svwh.tools.core.common.AppResult
 import com.svwh.tools.feature.hookconfig.data.HookLogTypeRegistry
@@ -14,6 +16,7 @@ import com.svwh.tools.feature.hookconfig.domain.repository.HookLogRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
+import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -63,7 +66,7 @@ class ContentProviderHookLogRepository @Inject constructor(
     ): AppResult<Unit> = withContext(Dispatchers.IO) {
         runCatching {
             when (envType) {
-                "with_env" -> deleteWithEnvLogs(packageName)
+                "with_env" -> deleteWithEnvLogs(packageName, selectedTypes)
                 "no_env" -> deleteNoEnvLogs(packageName, selectedTypes)
             }
             AppResult.Success(Unit)
@@ -80,22 +83,33 @@ class ContentProviderHookLogRepository @Inject constructor(
     }
 
     private fun queryWithEnvLogs(query: HookLogQuery): List<HookLogRecord> {
-        val uri = Uri.parse("content://${query.packageName}.killer_hook_provider")
-        val selection = buildTypeSelection(query.selectedTypes)
-        val args = mutableListOf("log_offset", query.offset.toString(), query.pageSize.toString())
-        args += selection
-        if (query.keyword.isNotBlank()) {
-            args += query.keyword
+        val dbFile = withEnvLogDatabaseFile(query.packageName)
+        if (!dbFile.exists()) return emptyList()
+
+        return SQLiteDatabase.openDatabase(dbFile.absolutePath, null, SQLiteDatabase.OPEN_READONLY).use { db ->
+            val typeSelection = buildTypeSelection(query.selectedTypes)
+            val whereParts = mutableListOf<String>()
+            val args = mutableListOf<String>()
+            if (typeSelection.isNotEmpty()) {
+                whereParts += "type IN (${typeSelection.joinToString(",") { "?" }})"
+                args += typeSelection
+            }
+            if (query.keyword.isNotBlank()) {
+                whereParts += "(title LIKE ? OR content LIKE ? OR stackTrace LIKE ?)"
+                repeat(3) { args += "%${query.keyword}%" }
+            }
+
+            db.query(
+                "HookLog",
+                arrayOf("id", "title", "time", "type", "packageName", "content", "stackTrace", "status", "exp", "isRead"),
+                whereParts.takeIf { it.isNotEmpty() }?.joinToString(" AND "),
+                args.toTypedArray(),
+                null,
+                null,
+                "id DESC",
+                "${query.offset},${query.pageSize}",
+            ).useRecords(fallbackPackageName = query.packageName)
         }
-        val cursor = context.contentResolver.query(
-            uri,
-            args.toTypedArray(),
-            null,
-            null,
-            null,
-        )
-        return cursor.useRecords(fallbackPackageName = query.packageName)
-            .filterByKeyword(query.keyword)
     }
 
     private fun queryNoEnvLogs(query: HookLogQuery): List<HookLogRecord> {
@@ -117,15 +131,23 @@ class ContentProviderHookLogRepository @Inject constructor(
     }
 
     private fun queryWithEnvDetail(packageName: String, id: Long): HookLogRecord? {
-        val uri = Uri.parse("content://${packageName}.killer_hook_provider")
-        val cursor = context.contentResolver.query(
-            uri,
-            arrayOf("log_detail", id.toString()),
-            null,
-            null,
-            null,
-        )
-        return cursor.useRecords(fallbackPackageName = packageName).firstOrNull()
+        val dbFile = withEnvLogDatabaseFile(packageName)
+        if (!dbFile.exists()) return null
+
+        return SQLiteDatabase.openDatabase(dbFile.absolutePath, null, SQLiteDatabase.OPEN_READWRITE).use { db ->
+            val record = db.query(
+                "HookLog",
+                null,
+                "id = ?",
+                arrayOf(id.toString()),
+                null,
+                null,
+                null,
+                "1",
+            ).useRecords(fallbackPackageName = packageName).firstOrNull()
+            db.execSQL("UPDATE HookLog SET isRead = 1 WHERE id = ?", arrayOf(id))
+            record
+        }
     }
 
     private fun queryNoEnvDetail(packageName: String, id: Long): HookLogRecord? {
@@ -140,9 +162,22 @@ class ContentProviderHookLogRepository @Inject constructor(
         return cursor.useRecords(fallbackPackageName = packageName).firstOrNull()
     }
 
-    private fun deleteWithEnvLogs(packageName: String) {
-        val uri = Uri.parse("content://${packageName}.killer_hook_provider")
-        context.contentResolver.query(uri, arrayOf("delete_all"), null, null, null)?.close()
+    private fun deleteWithEnvLogs(packageName: String, selectedTypes: Set<Int>) {
+        val dbFile = withEnvLogDatabaseFile(packageName)
+        if (!dbFile.exists()) return
+
+        SQLiteDatabase.openDatabase(dbFile.absolutePath, null, SQLiteDatabase.OPEN_READWRITE).use { db ->
+            if (selectedTypes.isEmpty()) {
+                db.delete("HookLog", null, null)
+            } else {
+                val typeSelection = selectedTypes.map(Int::toString)
+                db.delete(
+                    "HookLog",
+                    "type IN (${typeSelection.joinToString(",") { "?" }})",
+                    typeSelection.toTypedArray(),
+                )
+            }
+        }
     }
 
     private fun deleteNoEnvLogs(packageName: String, selectedTypes: Set<Int>) {
@@ -160,6 +195,13 @@ class ContentProviderHookLogRepository @Inject constructor(
         } else {
             selectedTypes.map(Int::toString)
         }
+    }
+
+    private fun withEnvLogDatabaseFile(packageName: String): File {
+        return File(
+            Environment.getExternalStorageDirectory(),
+            "Android/media/$packageName/killer_hook_no_env.db",
+        )
     }
 
     private fun Cursor?.useRecords(fallbackPackageName: String = ""): List<HookLogRecord> {
