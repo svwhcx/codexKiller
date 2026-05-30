@@ -27,10 +27,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -95,12 +92,8 @@ private fun QuickConfigGroupSection(
         group.items.forEachIndexed { index, item ->
             QuickConfigItemRow(
                 item = item,
-                checked = if (item.runtimeHookType != null) {
-                    item.id in uiState.enabledItems
-                } else {
-                    item.enabledByDefault
-                },
-                enabled = item.id !in uiState.loadingItems,
+                checked = item.id in uiState.enabledItems,
+                enabled = item.runtimeHookType != null && item.id !in uiState.loadingItems,
                 onCheckedChange = onCheckedChange,
             )
             if (index != group.items.lastIndex) {
@@ -163,22 +156,12 @@ private fun QuickConfigItemRow(
     onCheckedChange: (HookQuickConfigItem, Boolean) -> Unit,
 ) {
     val hasDetails = item.summaryValues.isNotEmpty() || item.detailHint != null
-    val isRuntimeBacked = item.runtimeHookType != null
-    var localChecked by rememberSaveable(item.id) { mutableStateOf(checked) }
-    val displayedChecked = if (isRuntimeBacked) checked else localChecked
-    val updateChecked: (Boolean) -> Unit = { next ->
-        if (isRuntimeBacked) {
-            onCheckedChange(item, next)
-        } else {
-            localChecked = next
-        }
-    }
 
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(enabled = enabled) {
-                updateChecked(!displayedChecked)
+                onCheckedChange(item, !checked)
             }
             .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -216,10 +199,10 @@ private fun QuickConfigItemRow(
                 Spacer(modifier = Modifier.width(4.dp))
             }
             HookSwitch(
-                checked = displayedChecked,
+                checked = checked,
                 onCheckedChange = {
                     if (enabled) {
-                        updateChecked(it)
+                        onCheckedChange(item, it)
                     }
                 },
             )

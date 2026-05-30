@@ -38,8 +38,7 @@ internal class QuickConfigViewModel @Inject constructor(
         if (current.envType == envType && current.packageName == packageName) return
         _uiState.value = QuickConfigUiState(envType = envType, packageName = packageName)
         viewModelScope.launch {
-            ensureDefaultConfigs(envType, packageName, groups)
-            refresh(envType, packageName)
+            refresh(envType, packageName, groups)
         }
     }
 
@@ -67,35 +66,35 @@ internal class QuickConfigViewModel @Inject constructor(
             } else if (enabled) {
                 repository.saveConfig(mapping.toDraft(state.envType, state.packageName))
             }
-            refresh(state.envType, state.packageName)
+            refresh(state.envType, state.packageName, null)
             _uiState.update { current ->
                 current.copy(loadingItems = current.loadingItems - item.id)
             }
         }
     }
 
-    private suspend fun ensureDefaultConfigs(
+    private suspend fun refresh(
         envType: String,
         packageName: String,
-        groups: List<HookQuickConfigGroup>,
+        groups: List<HookQuickConfigGroup>?,
     ) {
         val configs = loadConfigs(envType, packageName)
-        groups.flatMap { it.items }
-            .filter { it.enabledByDefault }
-            .mapNotNull { item -> QuickHookTypeMapping.fromItemId(item.id)?.to(item) }
-            .forEach { (mapping, _) ->
-                val existing = configs.firstOrNull { it.type == mapping.type }
-                if (existing == null) {
-                    repository.saveConfig(mapping.toDraft(envType, packageName))
-                }
+        val runtimeTypesByItemId = groups
+            ?.flatMap { group -> group.items }
+            ?.mapNotNull { item ->
+                val runtimeHookType = item.runtimeHookType ?: return@mapNotNull null
+                item.id to runtimeHookType
             }
-    }
-
-    private suspend fun refresh(envType: String, packageName: String) {
-        val configs = loadConfigs(envType, packageName)
-        val enabledItems = QuickHookTypeMapping.all()
-            .filter { mapping -> configs.any { it.type == mapping.type && it.enabled } }
-            .map { it.itemId }
+            ?.toMap()
+            ?: QuickHookTypeMapping.all().associate { mapping -> mapping.itemId to mapping.type }
+        val enabledTypes = configs
+            .asSequence()
+            .filter { it.enabled }
+            .map { it.type }
+            .toSet()
+        val enabledItems = runtimeTypesByItemId
+            .filterValues { type -> type in enabledTypes }
+            .keys
             .toSet()
         _uiState.update { current ->
             current.copy(
@@ -180,12 +179,22 @@ internal class QuickConfigViewModel @Inject constructor(
                 params = "*",
             )
 
+            private val onClick = QuickHookTypeMapping(
+                itemId = "onclick",
+                type = "5",
+                configName = "onClick 监听",
+                className = "android.view.View",
+                methodName = "setOnClickListener",
+                params = "android.view.View\$OnClickListener",
+            )
+
             fun all(): List<QuickHookTypeMapping> = listOf(
                 digest,
                 cipher,
                 userCertTrust,
                 hideWifiProxy,
                 hideVpn,
+                onClick,
             )
 
             fun fromItemId(itemId: String): QuickHookTypeMapping? {
