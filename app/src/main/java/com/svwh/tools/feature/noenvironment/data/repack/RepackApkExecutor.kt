@@ -178,8 +178,11 @@ class RepackApkExecutor @Inject constructor(
             "conf/killer_hook.dex",
             "conf/killer.bks",
             "conf/v7a/libpine.so",
+            "conf/v7a/killer-inject.so",
             "conf/v8a/libpine.so",
             "conf/v8a/killer-inject.so",
+            "conf/x86/killer-inject.so",
+            "conf/x86_64/killer-inject.so",
         )
     }
 }

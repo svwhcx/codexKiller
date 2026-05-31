@@ -15,6 +15,7 @@ import kotlinx.coroutines.withContext
 @Singleton
 class RoomFridaScriptRepository @Inject constructor(
     private val fridaScriptDao: FridaScriptDao,
+    private val noEnvFridaScriptExporter: NoEnvFridaScriptExporter,
 ) : FridaScriptRepository {
 
     override suspend fun getScripts(
@@ -58,6 +59,10 @@ class RoomFridaScriptRepository @Inject constructor(
             } else {
                 fridaScriptDao.insertScript(entity)
             }
+            noEnvFridaScriptExporter.syncPackage(
+                envType = draft.envType,
+                packageName = draft.packageName,
+            )
             AppResult.Success(savedId)
         }.getOrElse { AppResult.Failure(AppError.Unknown(it)) }
     }
@@ -72,6 +77,12 @@ class RoomFridaScriptRepository @Inject constructor(
                 enabled = enabled,
                 updatedAtMillis = System.currentTimeMillis(),
             )
+            fridaScriptDao.getScriptById(id)?.let { script ->
+                noEnvFridaScriptExporter.syncPackage(
+                    envType = script.envType,
+                    packageName = script.packageName,
+                )
+            }
             AppResult.Success(Unit)
         }.getOrElse { AppResult.Failure(AppError.Unknown(it)) }
     }
@@ -79,7 +90,17 @@ class RoomFridaScriptRepository @Inject constructor(
     override suspend fun deleteScripts(ids: List<Long>): AppResult<Unit> = withContext(Dispatchers.IO) {
         runCatching {
             if (ids.isNotEmpty()) {
+                val affectedPackages = ids
+                    .mapNotNull { id -> fridaScriptDao.getScriptById(id) }
+                    .map { script -> script.envType to script.packageName }
+                    .distinct()
                 fridaScriptDao.deleteScriptsByIds(ids)
+                affectedPackages.forEach { (envType, packageName) ->
+                    noEnvFridaScriptExporter.syncPackage(
+                        envType = envType,
+                        packageName = packageName,
+                    )
+                }
             }
             AppResult.Success(Unit)
         }.getOrElse { AppResult.Failure(AppError.Unknown(it)) }

@@ -16,11 +16,60 @@ class AddFridaModification: IApkModification {
         val injectConfig = """
             {"interaction":{"type":"script-directory","path":"/storage/emulated/0/Android/media/${apkProcessorContext.packageName}/frida/noenv"}}
         """.trimIndent()
-        val fridaNode = ExtraDataNode("lib/arm64-v8a/libkiller-inject.so",apkProcessorContext.context.assets.open("conf/v8a/killer-inject.so"))
-        val fridaConfigNode = ExtraDataNode("lib/arm64-v8a/libkiller-inject.config.so",ByteArrayInputStream(injectConfig.toByteArray()))
-
-        apkProcessorContext.extraDataNodes.add(fridaNode)
-        apkProcessorContext.extraDataNodes.add(fridaConfigNode)
+        FRIDA_ABIS.forEach { abi ->
+            addFridaGadget(
+                apkProcessorContext = apkProcessorContext,
+                abiDir = abi.apkLibDir,
+                assetPath = abi.assetPath,
+                injectConfig = injectConfig,
+            )
+        }
         return this
+    }
+
+    private fun addFridaGadget(
+        apkProcessorContext: ApkProcessorContext,
+        abiDir: String,
+        assetPath: String,
+        injectConfig: String,
+    ) {
+        apkProcessorContext.extraDataNodes.add(
+            ExtraDataNode(
+                "lib/$abiDir/libkiller-inject.so",
+                apkProcessorContext.context.assets.open(assetPath),
+            ),
+        )
+        apkProcessorContext.extraDataNodes.add(
+            ExtraDataNode(
+                "lib/$abiDir/libkiller-inject.config.so",
+                ByteArrayInputStream(injectConfig.toByteArray()),
+            ),
+        )
+    }
+
+    private data class FridaAbi(
+        val apkLibDir: String,
+        val assetPath: String,
+    )
+
+    private companion object {
+        val FRIDA_ABIS = listOf(
+            FridaAbi(
+                apkLibDir = "armeabi-v7a",
+                assetPath = "conf/v7a/killer-inject.so",
+            ),
+            FridaAbi(
+                apkLibDir = "arm64-v8a",
+                assetPath = "conf/v8a/killer-inject.so",
+            ),
+            FridaAbi(
+                apkLibDir = "x86",
+                assetPath = "conf/x86/killer-inject.so",
+            ),
+            FridaAbi(
+                apkLibDir = "x86_64",
+                assetPath = "conf/x86_64/killer-inject.so",
+            ),
+        )
     }
 }
