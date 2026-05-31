@@ -166,16 +166,15 @@ internal fun UserHookConfigPage(
     packageName: String,
     appName: String,
     onNavigateToEditor: (configId: Long) -> Unit,
+    onPermissionDenied: () -> Unit = {},
     viewModel: UserHookConfigViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val lifecycleOwner = LocalLifecycleOwner.current
-    val storagePermissionGate = rememberExternalStoragePermissionGate()
+    val storagePermissionGate = rememberExternalStoragePermissionGate(onPermissionDenied)
 
     LaunchedEffect(envType, packageName) {
-        storagePermissionGate.runAfterPermission {
-            viewModel.initialize(envType = envType, packageName = packageName)
-        }
+        viewModel.initialize(envType = envType, packageName = packageName)
     }
 
     DisposableEffect(lifecycleOwner, envType, packageName) {
@@ -332,7 +331,7 @@ internal fun UserHookConfigEditorRoute(
     viewModel: UserHookConfigViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val storagePermissionGate = rememberExternalStoragePermissionGate()
+    val storagePermissionGate = rememberExternalStoragePermissionGate(onBackClick)
 
     LaunchedEffect(envType, packageName) {
         storagePermissionGate.runAfterPermission {

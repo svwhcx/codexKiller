@@ -46,20 +46,19 @@ private val QuickConfigLineColor = Color(0xFFE6ECF5)
 internal fun QuickConfigPage(
     envType: String,
     packageName: String,
+    onPermissionDenied: () -> Unit = {},
     viewModel: QuickConfigViewModel = hiltViewModel(),
 ) {
     val groups = remember { defaultQuickConfigGroups() }
     val uiState by viewModel.uiState.collectAsState()
-    val storagePermissionGate = rememberExternalStoragePermissionGate()
+    val storagePermissionGate = rememberExternalStoragePermissionGate(onPermissionDenied)
 
     LaunchedEffect(envType, packageName) {
-        storagePermissionGate.runAfterPermission {
-            viewModel.initialize(
-                envType = envType,
-                packageName = packageName,
-                groups = groups,
-            )
-        }
+        viewModel.initialize(
+            envType = envType,
+            packageName = packageName,
+            groups = groups,
+        )
     }
 
     LazyColumn(

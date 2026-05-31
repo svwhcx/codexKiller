@@ -220,16 +220,15 @@ internal fun FridaScriptPage(
     packageName: String,
     onNavigateToEditor: (scriptId: Long) -> Unit,
     showImportAction: Boolean = true,
+    onPermissionDenied: () -> Unit = {},
     viewModel: FridaScriptViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val lifecycleOwner = LocalLifecycleOwner.current
-    val storagePermissionGate = rememberExternalStoragePermissionGate()
+    val storagePermissionGate = rememberExternalStoragePermissionGate(onPermissionDenied)
 
     LaunchedEffect(envType, packageName) {
-        storagePermissionGate.runAfterPermission {
-            viewModel.initialize(envType = envType, packageName = packageName)
-        }
+        viewModel.initialize(envType = envType, packageName = packageName)
     }
 
     DisposableEffect(lifecycleOwner, envType, packageName) {
@@ -417,7 +416,7 @@ internal fun FridaScriptEditorRoute(
     viewModel: FridaScriptViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val storagePermissionGate = rememberExternalStoragePermissionGate()
+    val storagePermissionGate = rememberExternalStoragePermissionGate(onBackClick)
 
     LaunchedEffect(envType, packageName) {
         storagePermissionGate.runAfterPermission {

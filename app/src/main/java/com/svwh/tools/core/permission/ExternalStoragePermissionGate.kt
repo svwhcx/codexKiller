@@ -10,17 +10,33 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 
 @Composable
-fun rememberExternalStoragePermissionGate(): ExternalStoragePermissionGate {
+fun rememberExternalStoragePermissionGate(
+    onPermissionDenied: () -> Unit = {},
+): ExternalStoragePermissionGate {
     val context = LocalContext.current
+    val currentOnPermissionDenied by rememberUpdatedState(onPermissionDenied)
     val permissionController = remember(context) {
         PermissionController(context.applicationContext)
     }
     var pendingAction by remember { mutableStateOf<(() -> Unit)?>(null) }
     var showAllFilesDialog by remember { mutableStateOf(false) }
+    var requestInProgress by remember { mutableStateOf(false) }
+
+    fun completeWithPermissionState() {
+        requestInProgress = false
+        if (permissionController.getExternalStorageAccessStatus() is ExternalStorageAccessStatus.Granted) {
+            pendingAction?.invoke()
+            pendingAction = null
+        } else {
+            pendingAction = null
+            currentOnPermissionDenied()
+        }
+    }
 
     val runtimePermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission(),
@@ -28,16 +44,17 @@ fun rememberExternalStoragePermissionGate(): ExternalStoragePermissionGate {
         if (granted) {
             pendingAction?.invoke()
             pendingAction = null
+        } else {
+            pendingAction = null
+            currentOnPermissionDenied()
         }
+        requestInProgress = false
     }
 
     val allFilesAccessLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult(),
     ) {
-        if (permissionController.getExternalStorageAccessStatus() is ExternalStorageAccessStatus.Granted) {
-            pendingAction?.invoke()
-            pendingAction = null
-        }
+        completeWithPermissionState()
     }
 
     if (showAllFilesDialog) {
@@ -49,22 +66,30 @@ fun rememberExternalStoragePermissionGate(): ExternalStoragePermissionGate {
             onDismiss = {
                 showAllFilesDialog = false
                 pendingAction = null
+                requestInProgress = false
+                currentOnPermissionDenied()
             },
         )
     }
 
-    return remember(permissionController) {
+    return remember(permissionController, runtimePermissionLauncher, allFilesAccessLauncher) {
         ExternalStoragePermissionGate(
             request = { action ->
                 when (val status = permissionController.getExternalStorageAccessStatus()) {
                     ExternalStorageAccessStatus.Granted -> action()
                     is ExternalStorageAccessStatus.RuntimePermissionRequired -> {
                         pendingAction = action
-                        runtimePermissionLauncher.launch(status.permission)
+                        if (!requestInProgress) {
+                            requestInProgress = true
+                            runtimePermissionLauncher.launch(status.permission)
+                        }
                     }
                     ExternalStorageAccessStatus.AllFilesAccessRequired -> {
                         pendingAction = action
-                        showAllFilesDialog = true
+                        if (!requestInProgress && !showAllFilesDialog) {
+                            requestInProgress = true
+                            showAllFilesDialog = true
+                        }
                     }
                 }
             },

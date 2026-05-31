@@ -38,6 +38,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -51,6 +52,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.svwh.tools.core.permission.rememberExternalStoragePermissionGate
 import kotlinx.coroutines.launch
 
 internal val HookConfigPageBackground = Color(0xFFFFFFFF)
@@ -99,6 +101,16 @@ fun HookConfigRoute(
     val coroutineScope = rememberCoroutineScope()
     val displayName = appName.ifBlank { packageName }
     val context = LocalContext.current
+    var storageReady by remember(envType, packageName) { mutableStateOf(false) }
+    val storagePermissionGate = rememberExternalStoragePermissionGate(
+        onPermissionDenied = onBackClick,
+    )
+
+    LaunchedEffect(envType, packageName) {
+        storagePermissionGate.runAfterPermission {
+            storageReady = true
+        }
+    }
 
     Scaffold(
         modifier = modifier
@@ -122,6 +134,9 @@ fun HookConfigRoute(
             )
         },
     ) { paddingValues ->
+        if (!storageReady) {
+            return@Scaffold
+        }
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -136,11 +151,13 @@ fun HookConfigRoute(
                     HookConfigTab.Quick -> QuickConfigPage(
                         envType = envType,
                         packageName = packageName,
+                        onPermissionDenied = onBackClick,
                     )
                     HookConfigTab.User -> UserHookConfigPage(
                         envType = envType,
                         packageName = packageName,
                         appName = displayName,
+                        onPermissionDenied = onBackClick,
                         onNavigateToEditor = { configId ->
                             onNavigateToUserConfigEditor(
                                 envType,
@@ -153,6 +170,7 @@ fun HookConfigRoute(
                     HookConfigTab.Frida -> FridaScriptPage(
                         envType = envType,
                         packageName = packageName,
+                        onPermissionDenied = onBackClick,
                         onNavigateToEditor = { scriptId ->
                             onNavigateToFridaScriptEditor(
                                 envType,

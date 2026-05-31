@@ -17,10 +17,6 @@ import java.util.List;
 
 public class DBHookConfigService implements IHookConfigService {
 
-    private boolean init = false;
-
-    private DataBaseHelper dbHelper;
-
     private final int envType;
 
     public DBHookConfigService() {
@@ -33,55 +29,57 @@ public class DBHookConfigService implements IHookConfigService {
 
     @Override
     public List<HookConfig> queryHookConfig(Context context) {
-        if (!init && !initDatabase(context)) {
+        DataBaseHelper dbHelper = createDatabaseHelper(context);
+        if (dbHelper == null) {
             return Collections.emptyList();
         }
 
         List<HookConfig> configList = new ArrayList<>();
-        SQLiteDatabase sqLiteDatabase = this.dbHelper.getReadableDatabase();
-        try (Cursor cursor = sqLiteDatabase.rawQuery(
-                "SELECT * FROM app_hook_config WHERE envType = ? AND packageName = ?",
-                new String[]{String.valueOf(envType), context.getPackageName()}
-        )) {
-            while (cursor.moveToNext()) {
-                int configId = cursor.getInt(cursor.getColumnIndexOrThrow("id"));
-                HookConfig config = new HookConfig();
+        try {
+            SQLiteDatabase database = dbHelper.getReadableDatabase();
+            try (Cursor cursor = database.rawQuery(
+                    "SELECT * FROM app_hook_config WHERE envType = ? AND packageName = ?",
+                    new String[]{String.valueOf(envType), context.getPackageName()}
+            )) {
+                while (cursor.moveToNext()) {
+                    int configId = cursor.getInt(cursor.getColumnIndexOrThrow("id"));
+                    HookConfig config = new HookConfig();
 
-                config.setConfigName(cursor.getString(cursor.getColumnIndexOrThrow("configName")));
-                config.setClassName(cursor.getString(cursor.getColumnIndexOrThrow("className")));
-                config.setMethodName(cursor.getString(cursor.getColumnIndexOrThrow("methodName")));
-                config.setParams(cursor.getString(cursor.getColumnIndexOrThrow("params")));
-                config.setLog(cursor.getInt(cursor.getColumnIndexOrThrow("isLog")) == 1);
-                config.setInterrupt(cursor.getInt(cursor.getColumnIndexOrThrow("isInterrupted")) == 1);
+                    config.setConfigName(cursor.getString(cursor.getColumnIndexOrThrow("configName")));
+                    config.setClassName(cursor.getString(cursor.getColumnIndexOrThrow("className")));
+                    config.setMethodName(cursor.getString(cursor.getColumnIndexOrThrow("methodName")));
+                    config.setParams(cursor.getString(cursor.getColumnIndexOrThrow("params")));
+                    config.setLog(cursor.getInt(cursor.getColumnIndexOrThrow("isLog")) == 1);
+                    config.setInterrupt(cursor.getInt(cursor.getColumnIndexOrThrow("isInterrupted")) == 1);
 
-                String exp = cursor.getString(cursor.getColumnIndexOrThrow("exp"));
-                config.setExp(exp != null ? exp : "");
+                    String exp = cursor.getString(cursor.getColumnIndexOrThrow("exp"));
+                    config.setExp(exp != null ? exp : "");
 
-                config.setType(cursor.getInt(cursor.getColumnIndexOrThrow("type")));
-                config.setChangeConfigs(queryChangeConfigs(configId));
-                configList.add(config);
+                    config.setType(cursor.getInt(cursor.getColumnIndexOrThrow("type")));
+                    config.setChangeConfigs(queryChangeConfigs(database, configId));
+                    configList.add(config);
+                }
             }
         } catch (Exception e) {
-            Log.e(RuntimeConstants.TAG, "查询 Hook 配置异常", e);
+            Log.e(RuntimeConstants.TAG, "Query Hook config failed", e);
+        } finally {
+            dbHelper.close();
         }
         return configList;
     }
 
-    private boolean initDatabase(Context context) {
+    private DataBaseHelper createDatabaseHelper(Context context) {
         File configDir = RuntimePaths.configDatabaseDir(context);
         if (configDir == null) {
-            Log.w(RuntimeConstants.TAG, "未找到 external media 目录，无法读取 Hook 配置数据库");
-            return false;
+            Log.w(RuntimeConstants.TAG, "External media directory is unavailable, cannot read Hook config database");
+            return null;
         }
-        this.dbHelper = new DataBaseHelper(configDir.getPath(), context);
-        this.init = true;
-        return true;
+        return new DataBaseHelper(configDir.getPath(), context);
     }
 
-    private List<ChangeConfig> queryChangeConfigs(int hookConfigId) {
+    private List<ChangeConfig> queryChangeConfigs(SQLiteDatabase database, int hookConfigId) {
         List<ChangeConfig> changeConfigs = new ArrayList<>();
-        SQLiteDatabase db = dbHelper.getReadableDatabase();
-        try (Cursor cursor = db.rawQuery(
+        try (Cursor cursor = database.rawQuery(
                 "SELECT * FROM change_value_config WHERE hookConfigId = ?",
                 new String[]{String.valueOf(hookConfigId)}
         )) {
