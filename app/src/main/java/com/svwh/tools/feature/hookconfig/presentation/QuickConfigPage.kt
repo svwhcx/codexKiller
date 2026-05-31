@@ -53,11 +53,13 @@ internal fun QuickConfigPage(
     val storagePermissionGate = rememberExternalStoragePermissionGate()
 
     LaunchedEffect(envType, packageName) {
-        viewModel.initialize(
-            envType = envType,
-            packageName = packageName,
-            groups = groups,
-        )
+        storagePermissionGate.runAfterPermission {
+            viewModel.initialize(
+                envType = envType,
+                packageName = packageName,
+                groups = groups,
+            )
+        }
     }
 
     LazyColumn(

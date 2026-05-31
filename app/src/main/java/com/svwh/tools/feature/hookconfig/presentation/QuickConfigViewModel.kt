@@ -62,7 +62,12 @@ internal class QuickConfigViewModel @Inject constructor(
             val configs = loadConfigs(state.envType, state.packageName)
             val existing = configs.firstOrNull { it.type == mapping.type }
             if (existing != null) {
-                repository.updateEnabled(existing.id, enabled)
+                repository.updateEnabled(
+                    envType = existing.envType,
+                    packageName = existing.packageName,
+                    id = existing.id,
+                    enabled = enabled,
+                )
             } else if (enabled) {
                 repository.saveConfig(mapping.toDraft(state.envType, state.packageName))
             }

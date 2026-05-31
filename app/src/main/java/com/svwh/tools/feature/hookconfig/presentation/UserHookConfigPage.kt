@@ -173,7 +173,9 @@ internal fun UserHookConfigPage(
     val storagePermissionGate = rememberExternalStoragePermissionGate()
 
     LaunchedEffect(envType, packageName) {
-        viewModel.initialize(envType = envType, packageName = packageName)
+        storagePermissionGate.runAfterPermission {
+            viewModel.initialize(envType = envType, packageName = packageName)
+        }
     }
 
     DisposableEffect(lifecycleOwner, envType, packageName) {
@@ -333,7 +335,9 @@ internal fun UserHookConfigEditorRoute(
     val storagePermissionGate = rememberExternalStoragePermissionGate()
 
     LaunchedEffect(envType, packageName) {
-        viewModel.initialize(envType = envType, packageName = packageName)
+        storagePermissionGate.runAfterPermission {
+            viewModel.initialize(envType = envType, packageName = packageName)
+        }
     }
 
     LaunchedEffect(configId) {

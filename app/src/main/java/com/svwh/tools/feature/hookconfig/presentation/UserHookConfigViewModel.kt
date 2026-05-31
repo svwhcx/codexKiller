@@ -99,8 +99,15 @@ internal class UserHookConfigViewModel @Inject constructor(
     }
 
     fun startEdit(id: Long) {
+        val state = _uiState.value
         viewModelScope.launch {
-            when (val result = repository.getConfigById(id)) {
+            when (
+                val result = repository.getConfigById(
+                    envType = state.envType,
+                    packageName = state.packageName,
+                    id = id,
+                )
+            ) {
                 is AppResult.Success -> {
                     _uiState.value = _uiState.value.copy(
                         editingDraft = result.data,
@@ -186,7 +193,14 @@ internal class UserHookConfigViewModel @Inject constructor(
 
     fun toggleEnabled(item: UserHookConfigItem) {
         viewModelScope.launch {
-            when (repository.updateEnabled(item.id, !item.enabled)) {
+            when (
+                repository.updateEnabled(
+                    envType = item.envType,
+                    packageName = item.packageName,
+                    id = item.id,
+                    enabled = !item.enabled,
+                )
+            ) {
                 is AppResult.Success -> loadConfigs()
                 is AppResult.Failure -> {
                     _uiState.value = _uiState.value.copy(errorMessage = ERROR_UPDATE_SWITCH)
@@ -237,8 +251,15 @@ internal class UserHookConfigViewModel @Inject constructor(
     fun deleteSelected() {
         val ids = _uiState.value.selectedIds.toList()
         if (ids.isEmpty()) return
+        val state = _uiState.value
         viewModelScope.launch {
-            when (repository.deleteConfigs(ids)) {
+            when (
+                repository.deleteConfigs(
+                    envType = state.envType,
+                    packageName = state.packageName,
+                    ids = ids,
+                )
+            ) {
                 is AppResult.Success -> loadConfigs()
                 is AppResult.Failure -> {
                     _uiState.value = _uiState.value.copy(errorMessage = ERROR_DELETE_CONFIG)

@@ -10,14 +10,24 @@ interface FridaScriptRepository {
         packageName: String,
     ): AppResult<List<FridaScriptItem>>
 
-    suspend fun getScriptById(id: Long): AppResult<FridaScriptDraft?>
+    suspend fun getScriptById(
+        envType: String,
+        packageName: String,
+        id: Long,
+    ): AppResult<FridaScriptDraft?>
 
     suspend fun saveScript(draft: FridaScriptDraft): AppResult<Long>
 
     suspend fun updateEnabled(
+        envType: String,
+        packageName: String,
         id: Long,
         enabled: Boolean,
     ): AppResult<Unit>
 
-    suspend fun deleteScripts(ids: List<Long>): AppResult<Unit>
+    suspend fun deleteScripts(
+        envType: String,
+        packageName: String,
+        ids: List<Long>,
+    ): AppResult<Unit>
 }

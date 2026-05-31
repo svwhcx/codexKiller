@@ -1,39 +1,27 @@
 package com.svwh.tools.feature.hookconfig.data.frida
 
 import android.os.Environment
-import com.svwh.tools.core.database.dao.FridaScriptDao
-import com.svwh.tools.core.database.entity.FridaScriptEntity
+import com.svwh.tools.feature.hookconfig.domain.model.FridaScriptItem
+import com.svwh.tools.feature.hookconfig.domain.model.GlobalFridaScriptScope
 import java.io.File
 import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 
 @Singleton
-class NoEnvFridaScriptExporter @Inject constructor(
-    private val fridaScriptDao: FridaScriptDao,
-) {
-    suspend fun syncPackage(
+class NoEnvFridaScriptExporter @Inject constructor() {
+    fun syncPackage(
         envType: String,
         packageName: String,
-    ) = withContext(Dispatchers.IO) {
-        if (packageName.isBlank() || envType != NO_ENV_STORAGE_VALUE) return@withContext
-
-        val scripts = fridaScriptDao.getScripts(
-            packageName = packageName,
-            envType = envType,
-        )
-        writeRuntimeScripts(
-            packageName = packageName,
-            scripts = scripts,
-        )
-    }
-
-    private fun writeRuntimeScripts(
-        packageName: String,
-        scripts: List<FridaScriptEntity>,
+        scripts: List<FridaScriptItem>,
     ) {
+        if (packageName.isBlank() ||
+            envType != NO_ENV_STORAGE_VALUE ||
+            packageName == GlobalFridaScriptScope.PACKAGE_NAME
+        ) {
+            return
+        }
+
         val scriptDir = runtimeScriptDirectory(packageName)
         ensureDirectory(scriptDir)
 
@@ -64,7 +52,7 @@ class NoEnvFridaScriptExporter @Inject constructor(
         )
     }
 
-    private fun FridaScriptEntity.runtimeFileName(): String {
+    private fun FridaScriptItem.runtimeFileName(): String {
         val safeName = name
             .trim()
             .replace(Regex("""[^A-Za-z0-9._-]"""), "_")

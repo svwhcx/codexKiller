@@ -2,13 +2,9 @@ package com.svwh.tools.feature.hookconfig.data.user
 
 import com.svwh.tools.core.common.AppError
 import com.svwh.tools.core.common.AppResult
-import com.svwh.tools.core.database.dao.UserHookConfigDao
-import com.svwh.tools.core.database.dao.UserHookConfigWithRules
-import com.svwh.tools.core.database.entity.ChangeValueRuleEntity
-import com.svwh.tools.core.database.entity.UserHookConfigEntity
+import com.svwh.tools.feature.hookconfig.data.target.TargetConfigDatabase
 import com.svwh.tools.feature.hookconfig.domain.model.UserHookConfigDraft
 import com.svwh.tools.feature.hookconfig.domain.model.UserHookConfigItem
-import com.svwh.tools.feature.hookconfig.domain.model.UserHookConfigRule
 import com.svwh.tools.feature.hookconfig.domain.repository.UserHookConfigRepository
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -17,8 +13,7 @@ import kotlinx.coroutines.withContext
 
 @Singleton
 class RoomUserHookConfigRepository @Inject constructor(
-    private val userHookConfigDao: UserHookConfigDao,
-    private val noEnvHookConfigExporter: NoEnvHookConfigExporter,
+    private val targetConfigDatabase: TargetConfigDatabase,
 ) : UserHookConfigRepository {
 
     override suspend fun getConfigs(
@@ -27,11 +22,11 @@ class RoomUserHookConfigRepository @Inject constructor(
     ): AppResult<List<UserHookConfigItem>> = withContext(Dispatchers.IO) {
         runCatching {
             AppResult.Success(
-                userHookConfigDao.getUserConfigsWithRules(
-                    packageName = packageName,
+                targetConfigDatabase.getUserConfigs(
                     envType = envType,
-                    type = CUSTOM_HOOK_TYPE,
-                ).mapToItems(),
+                    packageName = packageName,
+                    customOnly = true,
+                ),
             )
         }.getOrElse { AppResult.Failure(AppError.Unknown(it)) }
     }
@@ -42,118 +37,78 @@ class RoomUserHookConfigRepository @Inject constructor(
     ): AppResult<List<UserHookConfigItem>> = withContext(Dispatchers.IO) {
         runCatching {
             AppResult.Success(
-                userHookConfigDao.getConfigsWithRules(
-                    packageName = packageName,
+                targetConfigDatabase.getUserConfigs(
                     envType = envType,
-                ).mapToItems(),
+                    packageName = packageName,
+                    customOnly = false,
+                ),
             )
         }.getOrElse { AppResult.Failure(AppError.Unknown(it)) }
     }
 
-    override suspend fun getConfigById(id: Long): AppResult<UserHookConfigDraft?> = withContext(Dispatchers.IO) {
+    override suspend fun getConfigById(
+        envType: String,
+        packageName: String,
+        id: Long,
+    ): AppResult<UserHookConfigDraft?> = withContext(Dispatchers.IO) {
         runCatching {
-            AppResult.Success(userHookConfigDao.getConfigWithRulesById(id)?.toDraft())
+            AppResult.Success(
+                targetConfigDatabase.getUserConfigById(
+                    envType = envType,
+                    packageName = packageName,
+                    id = id,
+                ),
+            )
         }.getOrElse { AppResult.Failure(AppError.Unknown(it)) }
     }
 
     override suspend fun saveConfig(draft: UserHookConfigDraft): AppResult<Long> = withContext(Dispatchers.IO) {
         runCatching {
             validateDraft(draft)
-            val now = System.currentTimeMillis()
-            val existing = if (draft.id > 0) userHookConfigDao.getConfigWithRulesById(draft.id) else null
-            val entity = UserHookConfigEntity(
-                id = draft.id,
-                packageName = draft.packageName,
-                envType = draft.envType,
-                configName = draft.configName.trim(),
-                className = draft.className.trim(),
-                methodName = draft.methodName.trim(),
-                params = draft.params.trim(),
-                methodSignature = draft.methodSignature,
-                invokeClass = draft.invokeClass,
-                hookStatus = draft.hookStatus,
-                isLog = draft.isLog,
-                isInterrupted = draft.isInterrupted,
-                enabled = draft.enabled,
-                exp = draft.exp,
-                type = draft.type,
-                createdAtMillis = existing?.config?.createdAtMillis ?: now,
-                updatedAtMillis = now,
-            )
-            val savedId = if (draft.id > 0) {
-                userHookConfigDao.updateConfig(entity)
-                draft.id
-            } else {
-                userHookConfigDao.insertConfig(entity)
-            }
-            userHookConfigDao.deleteRulesByHookConfigId(savedId)
-            val rules = draft.rules.map { rule ->
-                ChangeValueRuleEntity(
-                    hookConfigId = savedId,
-                    rule = rule.rule,
-                    paramNumber = rule.paramNumber,
-                    matchValue = rule.matchValue,
-                    replaceValue = rule.replaceValue,
-                )
-            }
-            if (rules.isNotEmpty()) {
-                userHookConfigDao.insertRules(rules)
-            }
-            noEnvHookConfigExporter.syncPackage(
-                envType = draft.envType,
-                packageName = draft.packageName,
-            )
-            AppResult.Success(savedId)
+            AppResult.Success(targetConfigDatabase.saveUserConfig(draft))
         }.getOrElse { AppResult.Failure(AppError.Unknown(it)) }
     }
 
     override suspend fun updateEnabled(
+        envType: String,
+        packageName: String,
         id: Long,
         enabled: Boolean,
     ): AppResult<Unit> = withContext(Dispatchers.IO) {
         runCatching {
-            userHookConfigDao.updateEnabled(
+            targetConfigDatabase.updateUserConfigEnabled(
+                envType = envType,
+                packageName = packageName,
                 id = id,
                 enabled = enabled,
-                updatedAtMillis = System.currentTimeMillis(),
             )
-            userHookConfigDao.getConfigWithRulesById(id)?.config?.let { config ->
-                noEnvHookConfigExporter.syncPackage(
-                    envType = config.envType,
-                    packageName = config.packageName,
-                )
-            }
             AppResult.Success(Unit)
         }.getOrElse { AppResult.Failure(AppError.Unknown(it)) }
     }
 
-    override suspend fun deleteConfigs(ids: List<Long>): AppResult<Unit> = withContext(Dispatchers.IO) {
+    override suspend fun deleteConfigs(
+        envType: String,
+        packageName: String,
+        ids: List<Long>,
+    ): AppResult<Unit> = withContext(Dispatchers.IO) {
         runCatching {
-            if (ids.isNotEmpty()) {
-                val affectedPackages = userHookConfigDao.getConfigsWithRulesByIds(ids)
-                    .map { relation -> relation.config.envType to relation.config.packageName }
-                    .distinct()
-                userHookConfigDao.deleteRulesByHookConfigIds(ids)
-                userHookConfigDao.deleteConfigsByIds(ids)
-                affectedPackages.forEach { (envType, packageName) ->
-                    noEnvHookConfigExporter.syncPackage(
-                        envType = envType,
-                        packageName = packageName,
-                    )
-                }
-            }
+            targetConfigDatabase.deleteUserConfigs(
+                envType = envType,
+                packageName = packageName,
+                ids = ids,
+            )
             AppResult.Success(Unit)
         }.getOrElse { AppResult.Failure(AppError.Unknown(it)) }
     }
 
-    private suspend fun validateDraft(draft: UserHookConfigDraft) {
+    private fun validateDraft(draft: UserHookConfigDraft) {
         require(draft.packageName.isNotBlank()) { "packageName cannot be blank" }
         require(draft.envType.isNotBlank()) { "envType cannot be blank" }
         require(draft.configName.isNotBlank()) { "配置名称不能为空" }
         require(draft.className.isNotBlank()) { "类名不能为空" }
         require(draft.methodName.isNotBlank()) { "方法名不能为空" }
 
-        val duplicateNameCount = userHookConfigDao.countConfigName(
+        val duplicateNameCount = targetConfigDatabase.countUserConfigName(
             packageName = draft.packageName,
             envType = draft.envType,
             configName = draft.configName.trim(),
@@ -161,7 +116,7 @@ class RoomUserHookConfigRepository @Inject constructor(
         )
         require(duplicateNameCount == 0) { "配置名称已存在" }
 
-        val duplicateSignatureCount = userHookConfigDao.countSignature(
+        val duplicateSignatureCount = targetConfigDatabase.countUserConfigSignature(
             packageName = draft.packageName,
             envType = draft.envType,
             className = draft.className.trim(),
@@ -170,58 +125,5 @@ class RoomUserHookConfigRepository @Inject constructor(
             excludeId = draft.id,
         )
         require(duplicateSignatureCount == 0) { "相同方法签名的配置已存在" }
-    }
-
-    private fun UserHookConfigWithRules.toDraft(): UserHookConfigDraft {
-        return UserHookConfigDraft(
-            id = config.id,
-            packageName = config.packageName,
-            envType = config.envType,
-            configName = config.configName,
-            className = config.className,
-            methodName = config.methodName,
-            params = config.params,
-            methodSignature = config.methodSignature,
-            invokeClass = config.invokeClass,
-            hookStatus = config.hookStatus,
-            isLog = config.isLog,
-            isInterrupted = config.isInterrupted,
-            enabled = config.enabled,
-            exp = config.exp,
-            type = config.type,
-            rules = rules.map { rule ->
-                UserHookConfigRule(
-                    id = rule.id,
-                    hookConfigId = rule.hookConfigId,
-                    rule = rule.rule,
-                    paramNumber = rule.paramNumber,
-                    matchValue = rule.matchValue,
-                    replaceValue = rule.replaceValue,
-                )
-            },
-        )
-    }
-
-    private fun List<UserHookConfigWithRules>.mapToItems(): List<UserHookConfigItem> {
-        return map { relation ->
-            UserHookConfigItem(
-                id = relation.config.id,
-                packageName = relation.config.packageName,
-                envType = relation.config.envType,
-                configName = relation.config.configName,
-                className = relation.config.className,
-                methodName = relation.config.methodName,
-                params = relation.config.params,
-                type = relation.config.type,
-                enabled = relation.config.enabled,
-                isLog = relation.config.isLog,
-                isInterrupted = relation.config.isInterrupted,
-                ruleCount = relation.rules.size,
-            )
-        }
-    }
-
-    private companion object {
-        const val CUSTOM_HOOK_TYPE = "0"
     }
 }

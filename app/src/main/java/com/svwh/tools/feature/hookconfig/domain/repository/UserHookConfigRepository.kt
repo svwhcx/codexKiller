@@ -15,14 +15,24 @@ interface UserHookConfigRepository {
         packageName: String,
     ): AppResult<List<UserHookConfigItem>>
 
-    suspend fun getConfigById(id: Long): AppResult<UserHookConfigDraft?>
+    suspend fun getConfigById(
+        envType: String,
+        packageName: String,
+        id: Long,
+    ): AppResult<UserHookConfigDraft?>
 
     suspend fun saveConfig(draft: UserHookConfigDraft): AppResult<Long>
 
     suspend fun updateEnabled(
+        envType: String,
+        packageName: String,
         id: Long,
         enabled: Boolean,
     ): AppResult<Unit>
 
-    suspend fun deleteConfigs(ids: List<Long>): AppResult<Unit>
+    suspend fun deleteConfigs(
+        envType: String,
+        packageName: String,
+        ids: List<Long>,
+    ): AppResult<Unit>
 }

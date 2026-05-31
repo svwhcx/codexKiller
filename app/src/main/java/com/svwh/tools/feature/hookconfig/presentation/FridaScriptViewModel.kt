@@ -119,8 +119,15 @@ internal class FridaScriptViewModel @Inject constructor(
     }
 
     fun startEdit(id: Long) {
+        val state = _uiState.value
         viewModelScope.launch {
-            when (val result = repository.getScriptById(id)) {
+            when (
+                val result = repository.getScriptById(
+                    envType = state.envType,
+                    packageName = state.packageName,
+                    id = id,
+                )
+            ) {
                 is AppResult.Success -> {
                     _uiState.value = _uiState.value.copy(
                         editingDraft = result.data,
@@ -186,7 +193,14 @@ internal class FridaScriptViewModel @Inject constructor(
 
     fun toggleEnabled(item: FridaScriptItem) {
         viewModelScope.launch {
-            when (repository.updateEnabled(item.id, !item.enabled)) {
+            when (
+                repository.updateEnabled(
+                    envType = item.envType,
+                    packageName = item.packageName,
+                    id = item.id,
+                    enabled = !item.enabled,
+                )
+            ) {
                 is AppResult.Success -> loadScripts()
                 is AppResult.Failure -> {
                     _uiState.value = _uiState.value.copy(errorMessage = ERROR_UPDATE_SCRIPT_SWITCH)
@@ -237,8 +251,15 @@ internal class FridaScriptViewModel @Inject constructor(
     fun deleteSelected() {
         val ids = _uiState.value.selectedIds.toList()
         if (ids.isEmpty()) return
+        val state = _uiState.value
         viewModelScope.launch {
-            when (repository.deleteScripts(ids)) {
+            when (
+                repository.deleteScripts(
+                    envType = state.envType,
+                    packageName = state.packageName,
+                    ids = ids,
+                )
+            ) {
                 is AppResult.Success -> loadScripts()
                 is AppResult.Failure -> {
                     _uiState.value = _uiState.value.copy(errorMessage = ERROR_DELETE_SCRIPT)

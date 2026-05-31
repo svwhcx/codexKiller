@@ -101,6 +101,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import kotlinx.coroutines.launch
+import com.svwh.tools.core.permission.rememberExternalStoragePermissionGate
 import com.svwh.tools.feature.hookconfig.domain.model.FridaScriptDraft
 import com.svwh.tools.feature.hookconfig.domain.model.FridaScriptItem
 import com.svwh.tools.feature.hookconfig.domain.model.GlobalFridaScriptScope
@@ -223,9 +224,12 @@ internal fun FridaScriptPage(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val lifecycleOwner = LocalLifecycleOwner.current
+    val storagePermissionGate = rememberExternalStoragePermissionGate()
 
     LaunchedEffect(envType, packageName) {
-        viewModel.initialize(envType = envType, packageName = packageName)
+        storagePermissionGate.runAfterPermission {
+            viewModel.initialize(envType = envType, packageName = packageName)
+        }
     }
 
     DisposableEffect(lifecycleOwner, envType, packageName) {
@@ -293,7 +297,11 @@ internal fun FridaScriptPage(
                             },
                             onLongClick = { viewModel.enterSelectionMode(item.id) },
                             onCheckedChange = { viewModel.toggleSelection(item.id) },
-                            onEnabledChange = { viewModel.toggleEnabled(item) },
+                            onEnabledChange = {
+                                storagePermissionGate.runAfterPermission {
+                                    viewModel.toggleEnabled(item)
+                                }
+                            },
                         )
                         if (index != uiState.items.lastIndex) {
                             HorizontalDivider(
@@ -336,7 +344,11 @@ internal fun FridaScriptPage(
                     FridaSelectionActionButton(
                         text = TEXT_DELETE,
                         icon = Icons.Outlined.DeleteOutline,
-                        onClick = viewModel::deleteSelected,
+                        onClick = {
+                            storagePermissionGate.runAfterPermission {
+                                viewModel.deleteSelected()
+                            }
+                        },
                         modifier = Modifier.weight(1f),
                         contentColor = FridaErrorText,
                     )
@@ -358,14 +370,22 @@ internal fun FridaScriptPage(
                     FridaBottomActionButton(
                         text = TEXT_ADD_FRIDA,
                         icon = Icons.Default.Add,
-                        onClick = { onNavigateToEditor(0L) },
+                        onClick = {
+                            storagePermissionGate.runAfterPermission {
+                                onNavigateToEditor(0L)
+                            }
+                        },
                         modifier = Modifier.weight(1f),
                     )
                     if (showImportAction) {
                         FridaBottomActionButton(
                             text = TEXT_IMPORT_FRIDA,
                             icon = Icons.Outlined.FileDownload,
-                            onClick = viewModel::openImportDialog,
+                            onClick = {
+                                storagePermissionGate.runAfterPermission {
+                                    viewModel.openImportDialog()
+                                }
+                            },
                             modifier = Modifier.weight(1f),
                         )
                     }
@@ -378,7 +398,11 @@ internal fun FridaScriptPage(
         FridaImportDialog(
             items = uiState.globalItems,
             onDismiss = viewModel::closeImportDialog,
-            onImport = viewModel::importGlobalScript,
+            onImport = { item ->
+                storagePermissionGate.runAfterPermission {
+                    viewModel.importGlobalScript(item)
+                }
+            },
         )
     }
 }
@@ -393,9 +417,12 @@ internal fun FridaScriptEditorRoute(
     viewModel: FridaScriptViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val storagePermissionGate = rememberExternalStoragePermissionGate()
 
     LaunchedEffect(envType, packageName) {
-        viewModel.initialize(envType = envType, packageName = packageName)
+        storagePermissionGate.runAfterPermission {
+            viewModel.initialize(envType = envType, packageName = packageName)
+        }
     }
 
     LaunchedEffect(scriptId) {
@@ -423,7 +450,11 @@ internal fun FridaScriptEditorRoute(
             viewModel.closeEditor()
             onBackClick()
         },
-        onSave = viewModel::saveDraft,
+        onSave = {
+            storagePermissionGate.runAfterPermission {
+                viewModel.saveDraft()
+            }
+        },
         onDraftChange = viewModel::updateDraft,
     )
 }
