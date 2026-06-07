@@ -14,6 +14,7 @@ internal enum class HookConfigTab(val title: String) {
     Quick("快捷配置"),
     User("用户配置"),
     Frida("Frida"),
+    FridaLog("Frida日志"),
     Log("日志"),
 }
 

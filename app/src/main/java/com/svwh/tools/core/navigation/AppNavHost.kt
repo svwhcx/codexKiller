@@ -45,6 +45,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.svwh.tools.core.datastore.UserSettings
 import com.svwh.tools.feature.environment.presentation.EnvironmentRoute
+import com.svwh.tools.feature.hookconfig.presentation.FridaLogDetailRoute
 import com.svwh.tools.feature.hookconfig.presentation.FridaScriptEditorRoute
 import com.svwh.tools.feature.hookconfig.presentation.GlobalFridaScriptRoute
 import com.svwh.tools.feature.hookconfig.presentation.HookConfigRoute
@@ -181,6 +182,51 @@ fun AppNavHost(
                         ),
                     )
                 },
+                onNavigateToFridaLogDetail = { packageName, logId ->
+                    navController.navigate(
+                        AppDestination.fridaLogDetailRoute(
+                            packageName = packageName,
+                            logId = logId,
+                        ),
+                    )
+                },
+            )
+        }
+        composable(
+            route = AppDestination.FRIDA_LOG_DETAIL_ROUTE,
+            arguments = listOf(
+                navArgument("packageName") { type = NavType.StringType },
+                navArgument("logId") { type = NavType.LongType },
+            ),
+            enterTransition = {
+                slideInHorizontally(
+                    animationSpec = tween(300),
+                    initialOffsetX = { fullWidth -> fullWidth },
+                )
+            },
+            exitTransition = {
+                slideOutHorizontally(
+                    animationSpec = tween(300),
+                    targetOffsetX = { fullWidth -> -fullWidth / 3 },
+                )
+            },
+            popEnterTransition = {
+                slideInHorizontally(
+                    animationSpec = tween(300),
+                    initialOffsetX = { fullWidth -> -fullWidth / 3 },
+                )
+            },
+            popExitTransition = {
+                slideOutHorizontally(
+                    animationSpec = tween(300),
+                    targetOffsetX = { fullWidth -> fullWidth },
+                )
+            },
+        ) { backStackEntry ->
+            FridaLogDetailRoute(
+                packageName = backStackEntry.arguments?.getString("packageName")?.let(Uri::decode).orEmpty(),
+                logId = backStackEntry.arguments?.getLong("logId") ?: 0L,
+                onBackClick = navController::popBackStack,
             )
         }
         composable(

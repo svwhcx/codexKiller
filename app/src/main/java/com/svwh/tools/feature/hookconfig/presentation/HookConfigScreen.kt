@@ -8,6 +8,7 @@ import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,9 +20,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ArrowBack
@@ -64,6 +67,7 @@ internal val HookConfigPrimaryBlue = Color(0xFF1677FF)
 internal val HookConfigIconContainer = Color(0xFFEAF0FF)
 internal val HookConfigDivider = Color(0xFFE9EDF4)
 internal val HookConfigMutedText = Color(0xFF8A93A3)
+private val HookConfigTabWidth = 92.dp
 
 internal fun Modifier.hookConfigGradientBackground(): Modifier {
     return background(
@@ -87,6 +91,7 @@ fun HookConfigRoute(
     onBackClick: () -> Unit,
     onNavigateToUserConfigEditor: (envType: String, packageName: String, configId: Long, appName: String) -> Unit,
     onNavigateToFridaScriptEditor: (envType: String, packageName: String, scriptId: Long, appName: String) -> Unit,
+    onNavigateToFridaLogDetail: (packageName: String, logId: Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val tabs = remember {
@@ -95,6 +100,7 @@ fun HookConfigRoute(
             HookConfigTab.User,
             HookConfigTab.Frida,
             HookConfigTab.Log,
+            HookConfigTab.FridaLog,
         )
     }
     val pagerState = rememberPagerState(pageCount = { tabs.size })
@@ -145,7 +151,7 @@ fun HookConfigRoute(
             HorizontalPager(
                 state = pagerState,
                 modifier = Modifier.fillMaxSize(),
-                beyondViewportPageCount = 1,
+                beyondViewportPageCount = 0,
             ) { page ->
                 when (tabs[page]) {
                     HookConfigTab.Quick -> QuickConfigPage(
@@ -183,6 +189,12 @@ fun HookConfigRoute(
                     HookConfigTab.Log -> HookLogPage(
                         envType = envType,
                         packageName = packageName,
+                    )
+                    HookConfigTab.FridaLog -> FridaLogPage(
+                        packageName = packageName,
+                        onNavigateToDetail = { logId ->
+                            onNavigateToFridaLogDetail(packageName, logId)
+                        },
                     )
                 }
             }
@@ -334,15 +346,16 @@ private fun HookConfigTabs(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(46.dp),
+            .height(46.dp)
+            .horizontalScroll(rememberScrollState()),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         tabs.forEachIndexed { index, tab ->
             val selected = index == selectedIndex
             Box(
                 modifier = Modifier
-                    .weight(1f)
-                    .fillMaxSize()
+                    .width(HookConfigTabWidth)
+                    .height(46.dp)
                     .clickable { onTabClick(index) },
             ) {
                 Text(
@@ -355,7 +368,7 @@ private fun HookConfigTabs(
                 Box(
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
-                        .size(width = 42.dp, height = 2.dp)
+                        .size(width = HookConfigTabWidth, height = 2.dp)
                         .background(
                             color = if (selected) HookConfigPrimaryBlue else Color.Transparent,
                             shape = RoundedCornerShape(1.dp),

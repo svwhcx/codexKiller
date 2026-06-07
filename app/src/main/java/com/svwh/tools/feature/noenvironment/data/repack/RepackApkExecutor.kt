@@ -44,7 +44,7 @@ class RepackApkExecutor @Inject constructor(
 
         val unsignedApk = File(sessionRoot, "$safeName.apk")
         val signedApk = File(sessionRoot, "$safeName" + "_sign.apk")
-        val outputApk = File(outputDir, "$safeName-killer.apk")
+        val outputApk = File(outputDir, "$safeName-killer-${System.currentTimeMillis()}.apk")
 
         try {
             val sourceApk = runStepWithResult(reporter, "read_apk", "读取 APK", 8) {
@@ -96,6 +96,7 @@ class RepackApkExecutor @Inject constructor(
                 require(signedApk.exists() && signedApk.length() > 0L) {
                     "签名后的 APK 不存在或为空"
                 }
+                deleteExistingOutputApks(outputDir, safeName)
                 signedApk.copyTo(outputApk, overwrite = true)
             }
 
@@ -171,6 +172,16 @@ class RepackApkExecutor @Inject constructor(
 
     private fun String.toSafeFileName(): String {
         return replace(Regex("""[^A-Za-z0-9._-]"""), "_").ifBlank { "repacked" }
+    }
+
+    private fun deleteExistingOutputApks(outputDir: File, safeName: String) {
+        outputDir.listFiles { file ->
+            file.isFile &&
+                file.name.startsWith("$safeName-killer") &&
+                file.name.endsWith(".apk")
+        }?.forEach { file ->
+            runCatching { file.delete() }
+        }
     }
 
     private companion object {
