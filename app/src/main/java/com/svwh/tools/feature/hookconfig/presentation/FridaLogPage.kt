@@ -1,4 +1,4 @@
-package com.svwh.tools.feature.hookconfig.presentation
+﻿package com.svwh.tools.feature.hookconfig.presentation
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -41,6 +41,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -54,21 +55,30 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.svwh.tools.feature.hookconfig.domain.model.HookLogRecord
 import com.svwh.tools.feature.hookconfig.domain.model.HookLogTypeOption
+import com.svwh.tools.feature.settings.presentation.SettingsViewModel
 import com.svwh.tools.ui.components.RefreshableList
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Locale
 
 private val FridaLogSearchBackground = Color(0xFFF8FAFE)
 private val FridaLogSearchActionBackground = Color(0xFFF0F4FB)
-private val FridaLogTextPrimary = Color(0xFF2F3747)
+private val FridaLogTextPrimary = Color(0xFF000000)
 private val FridaLogTextSecondary = Color(0xFF6C768A)
 private val FridaLogSheetScrim = Color(0x66000000)
 private val FridaLogSheetBorder = Color(0xFFE8EDF5)
@@ -82,8 +92,10 @@ internal fun FridaLogPage(
     packageName: String,
     onNavigateToDetail: (Long) -> Unit,
     viewModel: FridaLogViewModel = hiltViewModel(),
+    settingsViewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val userSettings by settingsViewModel.uiState.collectAsStateWithLifecycle()
     var showLevelFilterDialog by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(packageName) {
@@ -108,6 +120,8 @@ internal fun FridaLogPage(
             onSelectAll = viewModel::selectAllVisible,
             onDeleteSelected = viewModel::deleteSelectedLogs,
             onCancelSelection = viewModel::clearSelection,
+            isCompactStyle = userSettings.fridaLogCompactStyle,
+            onCompactStyleChange = settingsViewModel::setFridaLogCompactStyle,
         )
 
         if (uiState.isEmpty) {
@@ -132,6 +146,7 @@ internal fun FridaLogPage(
                         log = log,
                         checked = log.id in uiState.selectedIds,
                         selectionMode = uiState.isSelectionMode,
+                        compactStyle = userSettings.fridaLogCompactStyle,
                         onClick = {
                             if (uiState.isSelectionMode) {
                                 viewModel.toggleSelected(log.id)
@@ -165,6 +180,7 @@ private fun FridaLogToolbar(
     selectedLevelCount: Int,
     selectedLogCount: Int,
     isSelectionMode: Boolean,
+    isCompactStyle: Boolean,
     onSearchQueryChange: (String) -> Unit,
     onSearchClick: () -> Unit,
     onRefreshClick: () -> Unit,
@@ -173,6 +189,7 @@ private fun FridaLogToolbar(
     onSelectAll: () -> Unit,
     onDeleteSelected: () -> Unit,
     onCancelSelection: () -> Unit,
+    onCompactStyleChange: (Boolean) -> Unit,
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
 
@@ -224,6 +241,7 @@ private fun FridaLogToolbar(
                 expanded = menuExpanded,
                 selectedLevelCount = selectedLevelCount,
                 isSelectionMode = isSelectionMode,
+                isCompactStyle = isCompactStyle,
                 onDismiss = { menuExpanded = false },
                 onRefreshClick = {
                     onRefreshClick()
@@ -249,6 +267,7 @@ private fun FridaLogToolbar(
                     onCancelSelection()
                     menuExpanded = false
                 },
+                onCompactStyleChange = onCompactStyleChange,
             )
         }
     }
@@ -325,6 +344,7 @@ private fun FridaLogMenu(
     expanded: Boolean,
     selectedLevelCount: Int,
     isSelectionMode: Boolean,
+    isCompactStyle: Boolean,
     onDismiss: () -> Unit,
     onRefreshClick: () -> Unit,
     onLevelFilterClick: () -> Unit,
@@ -332,6 +352,7 @@ private fun FridaLogMenu(
     onSelectAll: () -> Unit,
     onDeleteSelected: () -> Unit,
     onCancelSelection: () -> Unit,
+    onCompactStyleChange: (Boolean) -> Unit,
 ) {
     DropdownMenu(
         expanded = expanded,
@@ -345,6 +366,12 @@ private fun FridaLogMenu(
                 .width(220.dp)
                 .padding(vertical = 8.dp),
         ) {
+            FridaMenuSwitchAction(
+                title = "简洁风格",
+                checked = isCompactStyle,
+                onCheckedChange = onCompactStyleChange,
+            )
+            HorizontalDivider(color = FridaLogSheetBorder)
             if (isSelectionMode) {
                 FridaMenuAction(Icons.Outlined.SelectAll, "全选当前列表", onSelectAll)
                 FridaMenuAction(Icons.Outlined.Delete, "删除选中日志", onDeleteSelected)
@@ -586,6 +613,35 @@ private fun FridaLogRow(
     log: HookLogRecord,
     checked: Boolean,
     selectionMode: Boolean,
+    compactStyle: Boolean,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit,
+) {
+    if (compactStyle) {
+        FridaCompactLogRow(
+            log = log,
+            checked = checked,
+            selectionMode = selectionMode,
+            onClick = onClick,
+            onLongClick = onLongClick,
+        )
+    } else {
+        FridaRichLogRow(
+            log = log,
+            checked = checked,
+            selectionMode = selectionMode,
+            onClick = onClick,
+            onLongClick = onLongClick,
+        )
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun FridaRichLogRow(
+    log: HookLogRecord,
+    checked: Boolean,
+    selectionMode: Boolean,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
 ) {
@@ -661,6 +717,82 @@ private fun FridaLogRow(
     )
 }
 
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun FridaCompactLogRow(
+    log: HookLogRecord,
+    checked: Boolean,
+    selectionMode: Boolean,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit,
+) {
+    val summaryText = remember(log.typeLabel, log.time, log.title, log.content) {
+        fridaCompactSummary(log)
+    }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(if (checked) HookConfigPrimaryBlue.copy(alpha = 0.08f) else Color.Transparent)
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick,
+            )
+            .padding(horizontal = 10.dp, vertical = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (selectionMode) {
+            Checkbox(
+                checked = checked,
+                onCheckedChange = { onClick() },
+                modifier = Modifier.size(14.dp).scale(0.65f),
+                colors = CheckboxDefaults.colors(
+                    checkedColor = HookConfigPrimaryBlue,
+                    uncheckedColor = Color(0xFFC4CAD4),
+                    checkmarkColor = Color.White,
+                ),
+            )
+            Spacer(modifier = Modifier.width(2.dp))
+        }
+
+        Text(
+            text = summaryText,
+            style = MaterialTheme.typography.bodySmall.copy(
+                lineHeight = MaterialTheme.typography.bodySmall.lineHeight,
+            ),
+            color = FridaLogTextPrimary,
+            modifier = Modifier.weight(1f),
+        )
+    }
+}
+
+@Composable
+private fun FridaMenuSwitchAction(
+    title: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onCheckedChange(!checked) }
+            .padding(horizontal = 18.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(18.dp),
+    ) {
+        Text(
+            text = title,
+            modifier = Modifier.weight(1f),
+            style = MaterialTheme.typography.titleMedium,
+            color = FridaLogTextPrimary,
+        )
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+        )
+    }
+}
+
 @Composable
 private fun FridaLevelBadge(
     level: String,
@@ -684,6 +816,62 @@ private fun FridaLevelBadge(
     }
 }
 
+private fun fridaLevelShortLabel(level: String): String {
+    return when (level.uppercase()) {
+        "WARN", "WARNING" -> "W"
+        "ERROR" -> "E"
+        else -> "I"
+    }
+}
+
+private fun fridaCompactSummary(log: HookLogRecord): AnnotatedString {
+    val scriptName = log.title.ifBlank { "未命名脚本" }
+    val message = log.content.ifBlank { " " }
+    val timeText = fridaCompactTime(log.time)
+    val timeColor = fridaCompactTimeColor(log.typeLabel)
+    return buildAnnotatedString {
+        pushStyle(SpanStyle(color = timeColor, fontWeight = FontWeight.Normal))
+        append(timeText)
+        pop()
+        append("-[")
+        append(scriptName)
+        append("]: ")
+        append(message)
+    }
+}
+
+private fun fridaCompactTimeColor(level: String): Color {
+    return when (level.uppercase()) {
+        "ERROR" -> Color(0xFFE84C55)
+        "WARN", "WARNING" -> Color(0xFFFF8A2A)
+        else -> FridaLogTextPrimary
+    }
+}
+
+private fun fridaCompactTime(time: String): String {
+    if (time.isBlank()) return ""
+
+    val parsed = runCatching {
+        SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).parse(time)
+    }.getOrNull() ?: return time.take(10)
+
+    val logCalendar = Calendar.getInstance().apply { this.time = parsed }
+    val today = Calendar.getInstance()
+    val yesterday = Calendar.getInstance().apply { add(Calendar.DATE, -1) }
+    val clockText = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(parsed)
+
+    return when {
+        logCalendar.isSameDay(today) -> "今天 $clockText"
+        logCalendar.isSameDay(yesterday) -> "昨天 $clockText"
+        else -> SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(parsed)
+    }
+}
+
+private fun Calendar.isSameDay(other: Calendar): Boolean {
+    return get(Calendar.YEAR) == other.get(Calendar.YEAR) &&
+        get(Calendar.DAY_OF_YEAR) == other.get(Calendar.DAY_OF_YEAR)
+}
+
 private fun fridaLevelColor(level: String): Color {
     return when (level.uppercase()) {
         "ERROR" -> Color(0xFFE84C55)
@@ -703,13 +891,13 @@ private fun FridaLogEmptyState(
     ) {
         Icon(
             imageVector = Icons.Outlined.BugReport,
-            contentDescription = "暂无Frida日志",
+            contentDescription = "暂无 Frida 日志",
             tint = FridaLogTextSecondary,
             modifier = Modifier.size(36.dp),
         )
         Spacer(modifier = Modifier.height(16.dp))
         Text(
-            text = "暂无Frida日志",
+            text = "暂无 Frida 日志",
             style = MaterialTheme.typography.titleMedium,
             color = FridaLogTextSecondary,
         )

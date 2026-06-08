@@ -40,6 +40,7 @@ class SettingsDataStore @Inject constructor(
                 dynamicColor = preferences[Keys.DynamicColor] ?: true,
                 showNoEnvironmentTab = preferences[Keys.ShowNoEnvironmentTab] ?: true,
                 showEnvironmentTab = preferences[Keys.ShowEnvironmentTab] ?: true,
+                fridaLogCompactStyle = preferences[Keys.FridaLogCompactStyle] ?: false,
             )
         }
 
@@ -67,6 +68,12 @@ class SettingsDataStore @Inject constructor(
         }
     }
 
+    suspend fun setFridaLogCompactStyle(enabled: Boolean) {
+        context.settingsDataStore.edit { preferences ->
+            preferences[Keys.FridaLogCompactStyle] = enabled
+        }
+    }
+
     private fun runCatchingThemeMode(value: String): ThemeMode? {
         return runCatching { ThemeMode.valueOf(value) }.getOrNull()
     }
@@ -76,5 +83,6 @@ class SettingsDataStore @Inject constructor(
         val DynamicColor = booleanPreferencesKey("dynamic_color")
         val ShowNoEnvironmentTab = booleanPreferencesKey("show_no_environment_tab")
         val ShowEnvironmentTab = booleanPreferencesKey("show_environment_tab")
+        val FridaLogCompactStyle = booleanPreferencesKey("frida_log_compact_style")
     }
 }

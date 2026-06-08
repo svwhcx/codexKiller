@@ -46,4 +46,10 @@ class SettingsViewModel @Inject constructor(
             settingsDataStore.setShowEnvironmentTab(enabled)
         }
     }
+
+    fun setFridaLogCompactStyle(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsDataStore.setFridaLogCompactStyle(enabled)
+        }
+    }
 }

@@ -5,4 +5,5 @@ data class UserSettings(
     val dynamicColor: Boolean = true,
     val showNoEnvironmentTab: Boolean = true,
     val showEnvironmentTab: Boolean = true,
+    val fridaLogCompactStyle: Boolean = false,
 )
