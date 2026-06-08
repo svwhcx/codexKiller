@@ -1,15 +1,26 @@
 package com.svwh.tools.feature.hookconfig.data.frida
 
+import android.content.Context
 import android.os.Environment
 import com.svwh.tools.feature.hookconfig.domain.model.FridaScriptItem
 import com.svwh.tools.feature.hookconfig.domain.model.GlobalFridaScriptScope
+import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class NoEnvFridaScriptExporter @Inject constructor() {
+class NoEnvFridaScriptExporter @Inject constructor(
+    @ApplicationContext private val context: Context,
+) {
+    private val bridgeScript: String by lazy {
+        context.assets
+            .open(BRIDGE_JAVA_ASSET_PATH)
+            .bufferedReader(Charsets.UTF_8)
+            .use { reader -> reader.readText() }
+    }
+
     fun syncPackage(
         envType: String,
         packageName: String,
@@ -32,7 +43,7 @@ class NoEnvFridaScriptExporter @Inject constructor() {
         scripts
             .filter { script -> script.enabled && script.scriptContent.isNotBlank() }
             .forEach { script ->
-                File(scriptDir, script.runtimeFileName()).writeText(script.scriptContent)
+                File(scriptDir, script.runtimeFileName()).writeText(script.runtimeScriptContent(), Charsets.UTF_8)
             }
     }
 
@@ -53,15 +64,20 @@ class NoEnvFridaScriptExporter @Inject constructor() {
     }
 
     private fun FridaScriptItem.runtimeFileName(): String {
-        val safeName = name
-            .trim()
-            .replace(Regex("""[^A-Za-z0-9._-]"""), "_")
-            .ifBlank { "script" }
-            .removeSuffix(".js")
-        return "${id}_$safeName.js"
+        return "$name.js"
+    }
+
+    private fun FridaScriptItem.runtimeScriptContent(): String {
+        return buildString {
+            append(bridgeScript.trimEnd())
+            append('\n')
+                .append('\n')
+            append(scriptContent)
+        }
     }
 
     private companion object {
         const val NO_ENV_STORAGE_VALUE = "no_env"
+        const val BRIDGE_JAVA_ASSET_PATH = "conf/bridge-java.js"
     }
 }
