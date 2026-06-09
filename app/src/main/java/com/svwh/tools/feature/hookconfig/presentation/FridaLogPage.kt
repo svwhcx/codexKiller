@@ -130,32 +130,71 @@ internal fun FridaLogPage(
                     .fillMaxWidth()
                     .weight(1f),
             )
-        } else {
-            RefreshableList(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
-                isRefreshing = uiState.isRefreshing,
-                onRefresh = viewModel::refresh,
-                isLoadingMore = uiState.isLoadingMore,
-                onLoadMore = viewModel::loadMore,
-                hasMoreData = uiState.hasMore,
-            ) {
-                items(uiState.logs, key = { it.id }) { log ->
-                    FridaLogRow(
-                        log = log,
-                        checked = log.id in uiState.selectedIds,
-                        selectionMode = uiState.isSelectionMode,
-                        compactStyle = userSettings.fridaLogCompactStyle,
-                        onClick = {
-                            if (uiState.isSelectionMode) {
-                                viewModel.toggleSelected(log.id)
-                            } else {
-                                onNavigateToDetail(log.id)
-                            }
-                        },
-                        onLongClick = { viewModel.startSelection(log.id) },
-                    )
+    } else {
+            if (userSettings.fridaLogCompactStyle) {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                    color = Color.White.copy(alpha = 0.74f),
+                    shape = RoundedCornerShape(14.dp),
+                    tonalElevation = 0.dp,
+                    shadowElevation = 0.dp,
+                ) {
+                    RefreshableList(
+                        modifier = Modifier.fillMaxSize(),
+                        isRefreshing = uiState.isRefreshing,
+                        onRefresh = viewModel::refresh,
+                        isLoadingMore = uiState.isLoadingMore,
+                        onLoadMore = viewModel::loadMore,
+                        hasMoreData = uiState.hasMore,
+                    ) {
+                        items(uiState.logs, key = { it.id }) { log ->
+                            FridaLogRow(
+                                log = log,
+                                checked = log.id in uiState.selectedIds,
+                                selectionMode = uiState.isSelectionMode,
+                                compactStyle = userSettings.fridaLogCompactStyle,
+                                onClick = {
+                                    if (uiState.isSelectionMode) {
+                                        viewModel.toggleSelected(log.id)
+                                    } else {
+                                        onNavigateToDetail(log.id)
+                                    }
+                                },
+                                onLongClick = { viewModel.startSelection(log.id) },
+                            )
+                        }
+                    }
+                }
+            } else {
+                RefreshableList(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    isRefreshing = uiState.isRefreshing,
+                    onRefresh = viewModel::refresh,
+                    isLoadingMore = uiState.isLoadingMore,
+                    onLoadMore = viewModel::loadMore,
+                    hasMoreData = uiState.hasMore,
+                ) {
+                    items(uiState.logs, key = { it.id }) { log ->
+                        FridaLogRow(
+                            log = log,
+                            checked = log.id in uiState.selectedIds,
+                            selectionMode = uiState.isSelectionMode,
+                            compactStyle = userSettings.fridaLogCompactStyle,
+                            onClick = {
+                                if (uiState.isSelectionMode) {
+                                    viewModel.toggleSelected(log.id)
+                                } else {
+                                    onNavigateToDetail(log.id)
+                                }
+                            },
+                            onLongClick = { viewModel.startSelection(log.id) },
+                        )
+                    }
                 }
             }
         }
@@ -358,26 +397,19 @@ private fun FridaLogMenu(
         expanded = expanded,
         onDismissRequest = onDismiss,
         containerColor = Color.White,
-        shadowElevation = 10.dp,
-        shape = RoundedCornerShape(18.dp),
+        shadowElevation = 6.dp,
+        shape = RoundedCornerShape(14.dp),
     ) {
         Column(
             modifier = Modifier
-                .width(220.dp)
-                .padding(vertical = 8.dp),
+                .width(196.dp)
+                .padding(vertical = 6.dp),
         ) {
-            FridaMenuSwitchAction(
-                title = "简洁风格",
-                checked = isCompactStyle,
-                onCheckedChange = onCompactStyleChange,
-            )
-            HorizontalDivider(color = FridaLogSheetBorder)
             if (isSelectionMode) {
                 FridaMenuAction(Icons.Outlined.SelectAll, "全选当前列表", onSelectAll)
                 FridaMenuAction(Icons.Outlined.Delete, "删除选中日志", onDeleteSelected)
                 FridaMenuAction(Icons.Outlined.Close, "退出选择", onCancelSelection)
             } else {
-                FridaMenuAction(Icons.Outlined.Refresh, "刷新日志", onRefreshClick)
                 FridaMenuAction(
                     icon = Icons.Outlined.FilterList,
                     title = if (selectedLevelCount > 0) {
@@ -387,7 +419,14 @@ private fun FridaLogMenu(
                     },
                     onClick = onLevelFilterClick,
                 )
+                FridaMenuAction(Icons.Outlined.Refresh, "刷新日志", onRefreshClick)
                 FridaMenuAction(Icons.Outlined.Delete, "清空日志", onClearLogs)
+                HorizontalDivider(color = FridaLogSheetBorder)
+                FridaMenuSwitchAction(
+                    title = "简洁风格",
+                    checked = isCompactStyle,
+                    onCheckedChange = onCompactStyleChange,
+                )
             }
         }
     }
@@ -403,20 +442,20 @@ private fun FridaMenuAction(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(horizontal = 18.dp, vertical = 12.dp),
+            .padding(horizontal = 14.dp, vertical = 9.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(18.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Icon(
             imageVector = icon,
             contentDescription = null,
             tint = FridaLogTextPrimary,
-            modifier = Modifier.size(24.dp),
+            modifier = Modifier.size(18.dp),
         )
         Text(
             text = title,
             modifier = Modifier.weight(1f),
-            style = MaterialTheme.typography.titleMedium,
+            style = MaterialTheme.typography.bodyMedium,
             color = FridaLogTextPrimary,
         )
     }
@@ -776,19 +815,20 @@ private fun FridaMenuSwitchAction(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onCheckedChange(!checked) }
-            .padding(horizontal = 18.dp, vertical = 10.dp),
+            .padding(horizontal = 14.dp, vertical = 5.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(18.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Text(
             text = title,
             modifier = Modifier.weight(1f),
-            style = MaterialTheme.typography.titleMedium,
+            style = MaterialTheme.typography.bodyMedium,
             color = FridaLogTextPrimary,
         )
         Switch(
             checked = checked,
             onCheckedChange = onCheckedChange,
+            modifier = Modifier.scale(0.72f),
         )
     }
 }
@@ -825,18 +865,17 @@ private fun fridaLevelShortLabel(level: String): String {
 }
 
 private fun fridaCompactSummary(log: HookLogRecord): AnnotatedString {
-    val scriptName = log.title.ifBlank { "未命名脚本" }
-    val message = log.content.ifBlank { " " }
+    val message = log.content.trim()
     val timeText = fridaCompactTime(log.time)
     val timeColor = fridaCompactTimeColor(log.typeLabel)
     return buildAnnotatedString {
         pushStyle(SpanStyle(color = timeColor, fontWeight = FontWeight.Normal))
         append(timeText)
         pop()
-        append("-[")
-        append(scriptName)
-        append("]: ")
-        append(message)
+        if (message.isNotBlank()) {
+            append(" ")
+            append(message)
+        }
     }
 }
 

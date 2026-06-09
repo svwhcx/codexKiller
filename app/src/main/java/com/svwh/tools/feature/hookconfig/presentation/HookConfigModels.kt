@@ -52,7 +52,7 @@ internal fun defaultQuickConfigGroups(): List<HookQuickConfigGroup> {
                 HookQuickConfigItem(
                     id = "frida_delay_inject",
                     title = "延迟注入",
-                    subtitle = "",
+                    subtitle = "可设置延迟注入的延迟时间,单位:ms",
                     actionType = HookQuickConfigActionType.FridaDelayInject,
                 ),
             ),
