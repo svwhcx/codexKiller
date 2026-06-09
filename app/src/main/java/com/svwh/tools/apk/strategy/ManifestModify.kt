@@ -45,6 +45,9 @@ class ManifestModify : IApkModification {
                 )
 
                 node.appendChild(providerElement);
+                node.attributes.getNamedItem("android:extractNativeLibs")
+                    ?.takeIf { it.nodeValue == "false" }
+                    ?.nodeValue = "true"
                 // 3. 配置入口类
                 val namedItem = node.attributes.getNamedItem("android:name")
                 if (namedItem == null) {

@@ -438,7 +438,7 @@ private fun RepackListHeader(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Text(
-            text = "搴旂敤鍒楄〃",
+            text = "应用列表",
             style = MaterialTheme.typography.titleSmall,
             color = RepackTitleColor,
             fontWeight = FontWeight.Bold,
