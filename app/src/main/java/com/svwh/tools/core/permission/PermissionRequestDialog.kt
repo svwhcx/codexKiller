@@ -1,4 +1,4 @@
-package com.svwh.tools.core.permission
+﻿package com.svwh.tools.core.permission
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.BorderStroke

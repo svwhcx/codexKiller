@@ -32,6 +32,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -64,9 +65,18 @@ private val BottomBarDividerColor = Color(0xFFEFF3F8)
 @Composable
 fun AppNavHost(
     startupSettings: UserSettings,
+    startDestination: String = AppDestination.MAIN,
     modifier: Modifier = Modifier,
 ) {
     val navController = rememberNavController()
+
+    LaunchedEffect(startDestination) {
+        if (startDestination != AppDestination.MAIN) {
+            navController.navigate(startDestination) {
+                launchSingleTop = true
+            }
+        }
+    }
 
     NavHost(
         navController = navController,

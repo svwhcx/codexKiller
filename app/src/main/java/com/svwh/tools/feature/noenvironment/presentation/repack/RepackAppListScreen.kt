@@ -1,4 +1,8 @@
-package com.svwh.tools.feature.noenvironment.presentation.repack
+﻿package com.svwh.tools.feature.noenvironment.presentation.repack
+
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
@@ -38,18 +42,28 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.material.icons.outlined.Folder
+import androidx.core.content.ContextCompat
 import com.svwh.tools.R
+import com.svwh.tools.core.permission.PermissionRequestDialog
 import com.svwh.tools.feature.environment.domain.model.InstalledAppItem
 import com.svwh.tools.feature.environment.presentation.InlineLoadingRow
 import com.svwh.tools.feature.environment.presentation.InstalledAppIcon
@@ -73,12 +87,46 @@ private val RepackActionShadow = Color(0xFFE6F0FC)
 fun RepackAppListRoute(
     viewModel: RepackAppListViewModel = hiltViewModel(),
 ) {
+    val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val repackProgressState by viewModel.repackProgressState.collectAsStateWithLifecycle()
     val installCoordinator = rememberRepackInstallCoordinator(
         onInstallSucceeded = viewModel::onInstallSucceeded,
     )
     var showRepackDetails by remember { mutableStateOf(false) }
+    var showNotificationPermissionDialog by remember { mutableStateOf(false) }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+    ) { }
+
+    DisposableEffect(Unit) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.POST_NOTIFICATIONS,
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            showNotificationPermissionDialog = true
+        }
+        onDispose { }
+    }
+
+    DisposableEffect(lifecycleOwner) {
+        viewModel.setRepackPageVisible(true)
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_START -> viewModel.setRepackPageVisible(true)
+                Lifecycle.Event.ON_STOP -> viewModel.setRepackPageVisible(false)
+                else -> Unit
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            viewModel.setRepackPageVisible(false)
+        }
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         RepackAppListScreen(
@@ -99,6 +147,23 @@ fun RepackAppListRoute(
             RepackFailureDetailScreen(
                 state = repackProgressState,
                 onClose = { showRepackDetails = false },
+            )
+        }
+
+        if (showNotificationPermissionDialog) {
+            PermissionRequestDialog(
+                title = "需要通知权限",
+                message = "用于显示重打包进度和完成结果通知。",
+                icon = Icons.Outlined.Folder,
+                confirmText = "去授权",
+                dismissText = "暂不",
+                onConfirm = {
+                    showNotificationPermissionDialog = false
+                    notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                },
+                onDismiss = {
+                    showNotificationPermissionDialog = false
+                },
             )
         }
     }
@@ -373,7 +438,7 @@ private fun RepackListHeader(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Text(
-            text = "应用列表",
+            text = "搴旂敤鍒楄〃",
             style = MaterialTheme.typography.titleSmall,
             color = RepackTitleColor,
             fontWeight = FontWeight.Bold,

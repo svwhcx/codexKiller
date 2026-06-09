@@ -22,6 +22,7 @@ class RepackProgressControllerImpl @Inject constructor() : RepackProgressControl
     override fun startSession(packageName: String, appName: String, appIcon: Drawable?) {
         _state.value = RepackProgressState(
             visible = true,
+            screenVisible = _state.value.screenVisible,
             sessionId = System.currentTimeMillis(),
             packageName = packageName,
             appName = appName,
@@ -29,6 +30,12 @@ class RepackProgressControllerImpl @Inject constructor() : RepackProgressControl
             steps = emptyList(),
             sessionFinished = false,
         )
+    }
+
+    override fun setScreenVisible(visible: Boolean) {
+        _state.update { current ->
+            current.copy(screenVisible = visible)
+        }
     }
 
     override fun appendStep(command: AppendRepackStepCommand) {

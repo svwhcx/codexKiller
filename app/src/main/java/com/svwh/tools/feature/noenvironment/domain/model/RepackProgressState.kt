@@ -4,6 +4,7 @@ import android.graphics.drawable.Drawable
 
 data class RepackProgressState(
     val visible: Boolean = false,
+    val screenVisible: Boolean = false,
     val sessionId: Long = 0L,
     val packageName: String = "",
     val appName: String = "",

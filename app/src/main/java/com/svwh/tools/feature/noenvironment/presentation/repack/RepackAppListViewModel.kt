@@ -75,6 +75,10 @@ class RepackAppListViewModel @Inject constructor(
         repackProgressController.dismiss()
     }
 
+    fun setRepackPageVisible(visible: Boolean) {
+        repackProgressController.setScreenVisible(visible)
+    }
+
     fun onInstallSucceeded(packageName: String) {
         repackInstallEventStore.markInstalled(packageName)
         _uiState.update { state ->

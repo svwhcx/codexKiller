@@ -23,6 +23,7 @@ class RepackWorker @AssistedInject constructor(
     private val progressController: RepackProgressController,
     private val repackExecutor: RepackApkExecutor,
     private val notificationFactory: RepackWorkerNotificationFactory,
+    private val completionNotificationManager: RepackCompletionNotificationManager,
 ) : CoroutineWorker(appContext, workerParameters) {
 
     override suspend fun doWork(): Result {
@@ -202,6 +203,15 @@ class RepackWorker @AssistedInject constructor(
                     ongoing = false,
                 ),
             )
+            if (!progressController.state.value.screenVisible) {
+                completionNotificationManager.notifyResult(
+                    packageName = progressController.state.value.packageName,
+                    appName = appName,
+                    success = success,
+                    message = message,
+                    detail = detail,
+                )
+            }
         }
 
         private fun isStaleSession(): Boolean {

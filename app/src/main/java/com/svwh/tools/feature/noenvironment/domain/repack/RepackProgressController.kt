@@ -15,6 +15,8 @@ interface RepackProgressController {
 
     fun startSession(packageName: String, appName: String, appIcon: Drawable? = null)
 
+    fun setScreenVisible(visible: Boolean)
+
     fun appendStep(command: AppendRepackStepCommand)
 
     fun updateStep(command: UpdateRepackStepCommand)
