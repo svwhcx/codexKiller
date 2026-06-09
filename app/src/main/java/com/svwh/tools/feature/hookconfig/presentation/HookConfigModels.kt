@@ -33,10 +33,30 @@ internal data class HookQuickConfigItem(
     val detailHint: String? = null,
     val summaryValues: List<String> = emptyList(),
     val runtimeHookType: String? = null,
+    val actionType: HookQuickConfigActionType = HookQuickConfigActionType.Toggle,
 )
+
+internal enum class HookQuickConfigActionType {
+    Toggle,
+    FridaDelayInject,
+}
 
 internal fun defaultQuickConfigGroups(): List<HookQuickConfigGroup> {
     return listOf(
+        HookQuickConfigGroup(
+            id = "frida",
+            title = "Frida配置",
+            description = "配置 Frida noenv 注入行为",
+            icon = Icons.Outlined.BugReport,
+            items = listOf(
+                HookQuickConfigItem(
+                    id = "frida_delay_inject",
+                    title = "延迟注入",
+                    subtitle = "",
+                    actionType = HookQuickConfigActionType.FridaDelayInject,
+                ),
+            ),
+        ),
         HookQuickConfigGroup(
             id = "algorithm",
             title = "算法分析",

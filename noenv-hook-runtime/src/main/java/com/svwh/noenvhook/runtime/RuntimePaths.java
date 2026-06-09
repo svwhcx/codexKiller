@@ -38,4 +38,20 @@ public final class RuntimePaths {
     public static File configDatabaseDir(Context context) {
         return stoolDir(context);
     }
+
+    public static File fridaNoEnvDir(Context context) {
+        File mediaDir = firstExternalMediaDir(context);
+        if (mediaDir == null) {
+            return null;
+        }
+        return new File(
+                new File(mediaDir, RuntimeConstants.FRIDA_DIR_NAME),
+                RuntimeConstants.NO_ENV_DIR_NAME
+        );
+    }
+
+    public static File fridaNoEnvConfigFile(Context context) {
+        File fridaNoEnvDir = fridaNoEnvDir(context);
+        return fridaNoEnvDir == null ? null : new File(fridaNoEnvDir, RuntimeConstants.FRIDA_CONFIG_FILE);
+    }
 }

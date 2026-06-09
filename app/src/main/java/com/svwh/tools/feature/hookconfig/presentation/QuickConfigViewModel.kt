@@ -3,6 +3,7 @@ package com.svwh.tools.feature.hookconfig.presentation
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.svwh.tools.core.common.AppResult
+import com.svwh.tools.feature.hookconfig.data.frida.NoEnvFridaConfigStore
 import com.svwh.tools.feature.hookconfig.domain.model.UserHookConfigDraft
 import com.svwh.tools.feature.hookconfig.domain.model.UserHookConfigItem
 import com.svwh.tools.feature.hookconfig.domain.repository.UserHookConfigRepository
@@ -19,11 +20,15 @@ internal data class QuickConfigUiState(
     val packageName: String = "",
     val enabledItems: Set<String> = emptySet(),
     val loadingItems: Set<String> = emptySet(),
+    val fridaDelayInjectMillis: Long? = null,
+    val fridaConfigSaving: Boolean = false,
+    val fridaConfigError: String? = null,
 )
 
 @HiltViewModel
 internal class QuickConfigViewModel @Inject constructor(
     private val repository: UserHookConfigRepository,
+    private val fridaConfigStore: NoEnvFridaConfigStore,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(QuickConfigUiState())
@@ -39,6 +44,7 @@ internal class QuickConfigViewModel @Inject constructor(
         _uiState.value = QuickConfigUiState(envType = envType, packageName = packageName)
         viewModelScope.launch {
             refresh(envType, packageName, groups)
+            refreshFridaConfig(envType, packageName)
         }
     }
 
@@ -74,6 +80,48 @@ internal class QuickConfigViewModel @Inject constructor(
             refresh(state.envType, state.packageName, null)
             _uiState.update { current ->
                 current.copy(loadingItems = current.loadingItems - item.id)
+            }
+        }
+    }
+
+    fun saveFridaDelayInjectMillis(delayMillis: Long) {
+        val state = _uiState.value
+        if (state.envType != NO_ENV_STORAGE_VALUE || state.packageName.isBlank()) {
+            _uiState.update { current ->
+                current.copy(fridaConfigError = "延迟注入暂时只支持 noenv")
+            }
+            return
+        }
+
+        _uiState.update { current ->
+            current.copy(
+                fridaConfigSaving = true,
+                fridaConfigError = null,
+            )
+        }
+
+        viewModelScope.launch {
+            runCatching {
+                fridaConfigStore.saveDelayInjectMillis(
+                    envType = state.envType,
+                    packageName = state.packageName,
+                    delayMillis = delayMillis,
+                )
+            }.onSuccess {
+                _uiState.update { current ->
+                    current.copy(
+                        fridaDelayInjectMillis = delayMillis.coerceAtLeast(0L),
+                        fridaConfigSaving = false,
+                        fridaConfigError = null,
+                    )
+                }
+            }.onFailure { throwable ->
+                _uiState.update { current ->
+                    current.copy(
+                        fridaConfigSaving = false,
+                        fridaConfigError = throwable.message ?: "保存 Frida 配置失败",
+                    )
+                }
             }
         }
     }
@@ -114,6 +162,13 @@ internal class QuickConfigViewModel @Inject constructor(
         return when (val result = repository.getRuntimeConfigs(envType, packageName)) {
             is AppResult.Success -> result.data
             is AppResult.Failure -> emptyList()
+        }
+    }
+
+    private suspend fun refreshFridaConfig(envType: String, packageName: String) {
+        val delayMillis = fridaConfigStore.readDelayInjectMillis(envType, packageName)
+        _uiState.update { current ->
+            current.copy(fridaDelayInjectMillis = delayMillis)
         }
     }
 
@@ -206,5 +261,9 @@ internal class QuickConfigViewModel @Inject constructor(
                 return all().firstOrNull { it.itemId == itemId }
             }
         }
+    }
+
+    private companion object {
+        const val NO_ENV_STORAGE_VALUE = "no_env"
     }
 }

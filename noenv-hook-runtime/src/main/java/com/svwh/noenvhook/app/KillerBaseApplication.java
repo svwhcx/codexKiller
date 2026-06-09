@@ -3,11 +3,16 @@ package com.svwh.noenvhook.app;
 import android.annotation.SuppressLint;
 import android.app.Application;
 import android.content.Context;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 import android.widget.Toast;
 
+import com.svwh.noenvhook.runtime.FridaRuntimeConfig;
 import com.svwh.noenvhook.runtime.HookRuntime;
 import com.svwh.noenvhook.runtime.RuntimeConstants;
+
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class KillerBaseApplication extends Application {
 
@@ -18,11 +23,34 @@ public class KillerBaseApplication extends Application {
 
     private static boolean hookEnable = false;
 
-    static {
+    private static final AtomicBoolean nativeHookLoadScheduled = new AtomicBoolean(false);
+
+    private static final AtomicBoolean nativeHookLoaded = new AtomicBoolean(false);
+
+    private static void scheduleNativeHookLibraryLoad(Context context) {
+        if (!nativeHookLoadScheduled.compareAndSet(false, true)) {
+            return;
+        }
+
+        final Context appContext = context.getApplicationContext() != null
+                ? context.getApplicationContext()
+                : context;
+        new Thread(() -> {
+            final long delayMillis = FridaRuntimeConfig.delayInjectMillis(appContext);
+            Handler handler = new Handler(Looper.getMainLooper());
+            handler.postDelayed(KillerBaseApplication::loadNativeHookLibrary, delayMillis);
+        }, "STool-FridaInjectDelay").start();
+    }
+
+    private static void loadNativeHookLibrary() {
+        if (!nativeHookLoaded.compareAndSet(false, true)) {
+            return;
+        }
         try {
             System.loadLibrary("killer-inject");
         } catch (Throwable e) {
-            Log.e(RuntimeConstants.TAG, "加载 native hook 库失败", e);
+            nativeHookLoaded.set(false);
+            Log.e(RuntimeConstants.TAG, "load native hook library failed", e);
         }
     }
 
@@ -40,5 +68,6 @@ public class KillerBaseApplication extends Application {
         super.attachBaseContext(base);
         context = base;
         application = this;
+        scheduleNativeHookLibraryLoad(base);
     }
 }
