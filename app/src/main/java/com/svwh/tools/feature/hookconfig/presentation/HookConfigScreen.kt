@@ -52,6 +52,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -343,11 +344,20 @@ private fun HookConfigTabs(
     selectedIndex: Int,
     onTabClick: (Int) -> Unit,
 ) {
+    val tabScrollState = rememberScrollState()
+    val density = LocalDensity.current
+
+    LaunchedEffect(selectedIndex, tabScrollState.maxValue) {
+        val tabWidthPx = with(density) { HookConfigTabWidth.roundToPx() }
+        val targetScroll = (selectedIndex * tabWidthPx).coerceAtMost(tabScrollState.maxValue)
+        tabScrollState.animateScrollTo(targetScroll)
+    }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .height(46.dp)
-            .horizontalScroll(rememberScrollState()),
+            .horizontalScroll(tabScrollState),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         tabs.forEachIndexed { index, tab ->
