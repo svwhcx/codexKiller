@@ -33,18 +33,59 @@ class NoEnvFridaScriptExporter @Inject constructor(
             return
         }
 
-        val scriptDir = runtimeScriptDirectory(packageName)
-        ensureDirectory(scriptDir)
+        val runtimeRootDir = runtimeRootDirectory(packageName)
+        val runtimeScriptDir = runtimeScriptDirectory(packageName)
+        ensureDirectory(runtimeRootDir)
+        ensureDirectory(runtimeScriptDir)
 
-        scriptDir.listFiles()
+        runtimeScriptDir.listFiles()
             ?.filter { file -> file.isFile && file.extension.equals("js", ignoreCase = true) }
             ?.forEach { file -> file.delete() }
 
-        scripts
+        val enabledScripts = scripts
             .filter { script -> script.enabled && script.scriptContent.isNotBlank() }
-            .forEach { script ->
-                File(scriptDir, script.runtimeFileName()).writeText(script.runtimeScriptContent(), Charsets.UTF_8)
-            }
+
+        enabledScripts.forEach { script ->
+            File(runtimeScriptDir, script.runtimeFileName()).writeText(
+                script.runtimeScriptContent(),
+                Charsets.UTF_8,
+            )
+        }
+
+        File(runtimeRootDir, SCRIPT_PATH_FILE_NAME).writeText(
+            enabledScripts.joinToString(separator = "\n") { script ->
+                File(runtimeScriptDir, script.runtimeFileName()).absolutePath
+            },
+            Charsets.UTF_8,
+        )
+
+        if (enabledScripts.isNotEmpty()) {
+            ensureKillerScript(runtimeRootDir, runtimeScriptDir)
+        }
+    }
+
+    private fun ensureKillerScript(
+        runtimeRootDir: File,
+        runtimeScriptDir: File,
+    ) {
+        val killerScriptFile = File(runtimeRootDir, KILLER_SCRIPT_FILE_NAME)
+        if (killerScriptFile.exists()) return
+
+        val killerScriptBody = context.assets
+            .open(KILLER_SCRIPT_ASSET_PATH)
+            .bufferedReader(Charsets.UTF_8)
+            .use { reader -> reader.readText() }
+
+        killerScriptFile.writeText(
+            buildString {
+                append("const _SCRIPT_PATH_ = '")
+                append(runtimeScriptDir.absolutePath)
+                append("';")
+                append('\n')
+                append(killerScriptBody.trimStart())
+            },
+            Charsets.UTF_8,
+        )
     }
 
     private fun ensureDirectory(directory: File) {
@@ -56,22 +97,26 @@ class NoEnvFridaScriptExporter @Inject constructor(
         }
     }
 
-    private fun runtimeScriptDirectory(packageName: String): File {
+    private fun runtimeRootDirectory(packageName: String): File {
         return File(
             Environment.getExternalStorageDirectory(),
             "Android/media/$packageName/frida/noenv",
         )
     }
 
+    private fun runtimeScriptDirectory(packageName: String): File {
+        return File(runtimeRootDirectory(packageName), SCRIPTS_DIRECTORY_NAME)
+    }
+
     private fun FridaScriptItem.runtimeFileName(): String {
-        return "$name.js"
+        return "${name.trim()}.js"
     }
 
     private fun FridaScriptItem.runtimeScriptContent(): String {
         return buildString {
-            append(bridgeScript.trimEnd())
-            append('\n')
-                .append('\n')
+//            append(bridgeScript.trimEnd())
+//            append('\n')
+//            append('\n')
             append(scriptContent)
         }
     }
@@ -79,5 +124,9 @@ class NoEnvFridaScriptExporter @Inject constructor(
     private companion object {
         const val NO_ENV_STORAGE_VALUE = "no_env"
         const val BRIDGE_JAVA_ASSET_PATH = "conf/bridge-java.js"
+        const val KILLER_SCRIPT_ASSET_PATH = "conf/killer-frida.js"
+        const val KILLER_SCRIPT_FILE_NAME = "killer-frida.js"
+        const val SCRIPT_PATH_FILE_NAME = "sPath"
+        const val SCRIPTS_DIRECTORY_NAME = "scripts"
     }
 }

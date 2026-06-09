@@ -14,7 +14,7 @@ class AddFridaModification: IApkModification {
         // 1. 添加frida
         // 2. 对fridaConfig进行重写操作
         val injectConfig = """
-            {"interaction":{"type":"script-directory","path":"/storage/emulated/0/Android/media/${apkProcessorContext.packageName}/frida/noenv"}}
+            {"interaction":{"type":"script","path":"/storage/emulated/0/Android/media/${apkProcessorContext.packageName}/frida/noenv/killer-frida.js","on_change": "ignore"}}
         """.trimIndent()
         FRIDA_ABIS.forEach { abi ->
             addFridaGadget(
