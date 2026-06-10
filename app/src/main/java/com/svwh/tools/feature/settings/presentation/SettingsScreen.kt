@@ -8,14 +8,18 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -27,29 +31,32 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.unit.dp
@@ -60,12 +67,14 @@ import com.svwh.tools.core.datastore.RepackSigningMode
 import com.svwh.tools.core.datastore.ThemeMode
 import com.svwh.tools.core.datastore.UserSettings
 
-private val SettingsBackgroundTop = Color(0xFFF7FAFF)
+private val SettingsBackgroundTop = Color(0xFFF6F8FC)
 private val SettingsBackgroundBottom = Color(0xFFFFFFFF)
-private val SettingsCardBorder = Color(0xFFE3EAF5)
-private val SettingsCardSurface = Color(0xF7FFFFFF)
+private val SettingsCardBorder = Color(0xFFE8EDF5)
+private val SettingsCardSurface = Color(0xFFFFFFFF)
 private val SettingsBlue = Color(0xFF1677FF)
-private val SettingsMutedText = Color(0xFF758298)
+private val SettingsPaleBlue = Color(0xFFEAF1FF)
+private val SettingsTitleText = Color(0xFF182235)
+private val SettingsMutedText = Color(0xFF7B8798)
 
 @Composable
 fun SettingsRoute(
@@ -141,6 +150,7 @@ private fun SettingsScreen(
     }
 
     Scaffold(
+        containerColor = SettingsBackgroundBottom,
         topBar = {
             TopAppBar(
                 title = { Text("设置") },
@@ -154,6 +164,12 @@ private fun SettingsScreen(
                         }
                     }
                 },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.Transparent,
+                    titleContentColor = SettingsTitleText,
+                    navigationIconContentColor = SettingsTitleText,
+                    actionIconContentColor = SettingsTitleText,
+                ),
             )
         },
     ) { paddingValues ->
@@ -167,24 +183,16 @@ private fun SettingsScreen(
                 )
                 .padding(paddingValues)
                 .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
+            verticalArrangement = Arrangement.spacedBy(18.dp),
         ) {
             SettingsSection(
                 title = "外观",
                 description = "控制主题色与显示方式",
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                ) {
-                    ThemeMode.entries.forEach { mode ->
-                        FilterChip(
-                            selected = uiState.themeMode == mode,
-                            onClick = { onThemeModeChange(mode) },
-                            label = { Text(mode.label) },
-                        )
-                    }
-                }
+                SegmentedThemeSelector(
+                    selectedMode = uiState.themeMode,
+                    onThemeModeChange = onThemeModeChange,
+                )
                 SettingsSwitchRow(
                     title = "动态取色",
                     description = "在支持的设备上使用系统配色",
@@ -209,11 +217,7 @@ private fun SettingsScreen(
                     },
                 )
                 signingConfigError?.let { message ->
-                    Text(
-                        text = message,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error,
-                    )
+                    SectionHintText(text = message, color = MaterialTheme.colorScheme.error)
                 }
                 if (uiState.repackSigningMode == RepackSigningMode.Custom) {
                     OutlinedButton(
@@ -242,9 +246,8 @@ private fun SettingsScreen(
                     checked = uiState.showEnvironmentTab,
                     onCheckedChange = onShowEnvironmentTabChange,
                 )
-                Text(
+                SectionHintText(
                     text = "页签显示设置会在重启 App 后生效",
-                    style = MaterialTheme.typography.bodySmall,
                     color = SettingsBlue,
                 )
             }
@@ -273,6 +276,46 @@ private fun SettingsScreen(
 }
 
 @Composable
+private fun SegmentedThemeSelector(
+    selectedMode: ThemeMode,
+    onThemeModeChange: (ThemeMode) -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .border(1.dp, SettingsCardBorder, RoundedCornerShape(14.dp)),
+    ) {
+        ThemeMode.entries.forEachIndexed { index, mode ->
+            val selected = selectedMode == mode
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .background(if (selected) SettingsPaleBlue else SettingsCardSurface)
+                    .clickable { onThemeModeChange(mode) }
+                    .padding(vertical = 12.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = mode.label,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = if (selected) SettingsBlue else SettingsMutedText,
+                    fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
+                )
+            }
+            if (index != ThemeMode.entries.lastIndex) {
+                Box(
+                    modifier = Modifier
+                        .width(1.dp)
+                        .height(44.dp)
+                        .background(SettingsCardBorder),
+                )
+            }
+        }
+    }
+}
+
+@Composable
 private fun CustomSigningSwitchRow(
     enabled: Boolean,
     keyName: String,
@@ -283,15 +326,11 @@ private fun CustomSigningSwitchRow(
     } else {
         "开启后可选择自定义密钥用于打包"
     }
-    ListItem(
-        headlineContent = { Text("采用自定义密钥") },
-        supportingContent = { Text(description) },
-        trailingContent = {
-            Switch(
-                checked = enabled,
-                onCheckedChange = onCheckedChange,
-            )
-        },
+    SettingsToggleRow(
+        title = "采用自定义密钥",
+        description = description,
+        checked = enabled,
+        onCheckedChange = onCheckedChange,
     )
 }
 
@@ -351,13 +390,22 @@ private fun SigningConfigDialog(
                 Column {
                     OutlinedTextField(
                         modifier = Modifier
-                            .clickable { expanded = true }
-                            .fillMaxWidth(),
+                            .fillMaxWidth()
+                            .clickable { expanded = true },
                         value = keyStoreType,
                         onValueChange = {},
                         readOnly = true,
                         singleLine = true,
                         label = { Text("密钥类型") },
+                        trailingIcon = {
+                            Text(
+                                modifier = Modifier.clickable { expanded = true },
+                                text = if (expanded) "▲" else "▼",
+                                color = SettingsMutedText,
+                                style = MaterialTheme.typography.labelMedium,
+                            )
+                        },
+                        enabled = true,
                     )
                     DropdownMenu(
                         expanded = expanded,
@@ -451,18 +499,71 @@ private fun SettingsSwitchRow(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
 ) {
-    ListItem(
-        modifier = Modifier.clickable {
-            onCheckedChange(!checked)
-        },
-        headlineContent = { Text(text = title) },
-        supportingContent = { Text(text = description) },
-        trailingContent = {
-            Switch(
-                checked = checked,
-                onCheckedChange = onCheckedChange,
+    SettingsToggleRow(
+        title = title,
+        description = description,
+        checked = checked,
+        onCheckedChange = onCheckedChange,
+    )
+}
+
+@Composable
+private fun SettingsToggleRow(
+    title: String,
+    description: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onCheckedChange(!checked) }
+            .padding(horizontal = 2.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(3.dp),
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleSmall,
+                color = SettingsTitleText,
+                fontWeight = FontWeight.SemiBold,
             )
-        },
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodySmall,
+                color = SettingsMutedText,
+            )
+        }
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = Color.White,
+                checkedTrackColor = SettingsBlue,
+                checkedBorderColor = SettingsBlue,
+                uncheckedThumbColor = Color.White,
+                uncheckedTrackColor = Color(0xFFE5EAF2),
+                uncheckedBorderColor = Color(0xFFD5DCE8),
+            ),
+        )
+    }
+}
+
+@Composable
+private fun SectionHintText(
+    text: String,
+    color: Color,
+) {
+    Text(
+        modifier = Modifier.padding(horizontal = 2.dp, vertical = 2.dp),
+        text = text,
+        style = MaterialTheme.typography.bodySmall,
+        color = color,
+        fontWeight = FontWeight.Medium,
     )
 }
 
@@ -474,13 +575,14 @@ private fun SettingsSection(
 ) {
     Column(
         modifier = Modifier.padding(horizontal = 20.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(
                 text = title,
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface,
+                style = MaterialTheme.typography.titleSmall,
+                color = SettingsTitleText,
+                fontWeight = FontWeight.SemiBold,
             )
             Text(
                 text = description,
@@ -496,8 +598,8 @@ private fun SettingsSection(
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         ) {
             Column(
-                modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 content()
             }
