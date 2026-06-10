@@ -19,8 +19,7 @@ object InjectedAbiSelector {
             .toSet()
 
         if (sourceAbis.isNotEmpty()) {
-            Build.SUPPORTED_ABIS.firstOrNull { abi -> abi in sourceAbis }?.let { return setOf(it) }
-            return setOf(sourceAbis.first())
+            return sourceAbis
         }
 
         return Build.SUPPORTED_ABIS
