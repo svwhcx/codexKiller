@@ -6,4 +6,11 @@ data class UserSettings(
     val showNoEnvironmentTab: Boolean = true,
     val showEnvironmentTab: Boolean = true,
     val fridaLogCompactStyle: Boolean = false,
+    val repackSigningMode: RepackSigningMode = RepackSigningMode.BuiltIn,
+    val customSigningKeyUri: String = "",
+    val customSigningKeyName: String = "",
+    val customSigningKeyStoreType: String = "BKS",
+    val customSigningKeyAlias: String = "",
+    val customSigningStorePassword: String = "",
+    val customSigningKeyPassword: String = "",
 )

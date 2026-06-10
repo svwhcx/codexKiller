@@ -41,6 +41,15 @@ class SettingsDataStore @Inject constructor(
                 showNoEnvironmentTab = preferences[Keys.ShowNoEnvironmentTab] ?: true,
                 showEnvironmentTab = preferences[Keys.ShowEnvironmentTab] ?: true,
                 fridaLogCompactStyle = preferences[Keys.FridaLogCompactStyle] ?: false,
+                repackSigningMode = preferences[Keys.RepackSigningMode]
+                    ?.let(::runCatchingRepackSigningMode)
+                    ?: RepackSigningMode.BuiltIn,
+                customSigningKeyUri = preferences[Keys.CustomSigningKeyUri].orEmpty(),
+                customSigningKeyName = preferences[Keys.CustomSigningKeyName].orEmpty(),
+                customSigningKeyStoreType = preferences[Keys.CustomSigningKeyStoreType] ?: "BKS",
+                customSigningKeyAlias = preferences[Keys.CustomSigningKeyAlias].orEmpty(),
+                customSigningStorePassword = preferences[Keys.CustomSigningStorePassword].orEmpty(),
+                customSigningKeyPassword = preferences[Keys.CustomSigningKeyPassword].orEmpty(),
             )
         }
 
@@ -74,8 +83,37 @@ class SettingsDataStore @Inject constructor(
         }
     }
 
+    suspend fun setBuiltInRepackSigning() {
+        context.settingsDataStore.edit { preferences ->
+            preferences[Keys.RepackSigningMode] = RepackSigningMode.BuiltIn.name
+        }
+    }
+
+    suspend fun setCustomSigningConfig(
+        uri: String,
+        name: String,
+        keyStoreType: String,
+        alias: String,
+        storePassword: String,
+        keyPassword: String,
+    ) {
+        context.settingsDataStore.edit { preferences ->
+            preferences[Keys.RepackSigningMode] = RepackSigningMode.Custom.name
+            preferences[Keys.CustomSigningKeyUri] = uri
+            preferences[Keys.CustomSigningKeyName] = name
+            preferences[Keys.CustomSigningKeyStoreType] = keyStoreType
+            preferences[Keys.CustomSigningKeyAlias] = alias
+            preferences[Keys.CustomSigningStorePassword] = storePassword
+            preferences[Keys.CustomSigningKeyPassword] = keyPassword
+        }
+    }
+
     private fun runCatchingThemeMode(value: String): ThemeMode? {
         return runCatching { ThemeMode.valueOf(value) }.getOrNull()
+    }
+
+    private fun runCatchingRepackSigningMode(value: String): RepackSigningMode? {
+        return runCatching { RepackSigningMode.valueOf(value) }.getOrNull()
     }
 
     private object Keys {
@@ -84,5 +122,12 @@ class SettingsDataStore @Inject constructor(
         val ShowNoEnvironmentTab = booleanPreferencesKey("show_no_environment_tab")
         val ShowEnvironmentTab = booleanPreferencesKey("show_environment_tab")
         val FridaLogCompactStyle = booleanPreferencesKey("frida_log_compact_style")
+        val RepackSigningMode = stringPreferencesKey("repack_signing_mode")
+        val CustomSigningKeyUri = stringPreferencesKey("custom_signing_key_uri")
+        val CustomSigningKeyName = stringPreferencesKey("custom_signing_key_name")
+        val CustomSigningKeyStoreType = stringPreferencesKey("custom_signing_key_store_type")
+        val CustomSigningKeyAlias = stringPreferencesKey("custom_signing_key_alias")
+        val CustomSigningStorePassword = stringPreferencesKey("custom_signing_store_password")
+        val CustomSigningKeyPassword = stringPreferencesKey("custom_signing_key_password")
     }
 }

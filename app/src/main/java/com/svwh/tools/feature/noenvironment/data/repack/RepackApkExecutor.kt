@@ -14,6 +14,9 @@ import com.svwh.tools.apk.observer.ProcessEventResult
 import com.svwh.tools.apk.observer.ProcessEventType
 import com.svwh.tools.apk.pipline.ResolveApkStage
 import com.svwh.tools.core.common.AppDispatchers
+import com.svwh.tools.core.datastore.RepackSigningMode
+import com.svwh.tools.core.datastore.SettingsDataStore
+import com.svwh.tools.core.datastore.UserSettings
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import javax.inject.Inject
@@ -21,12 +24,14 @@ import javax.inject.Singleton
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 
 @Singleton
 class RepackApkExecutor @Inject constructor(
     @ApplicationContext private val context: Context,
     private val dispatchers: AppDispatchers,
+    private val settingsDataStore: SettingsDataStore,
 ) {
     suspend fun execute(
         packageName: String,
@@ -68,13 +73,14 @@ class RepackApkExecutor @Inject constructor(
 
             runStep(reporter, "rewrite_apk", "写入无环境 Hook", 48) {
                 currentCoroutineContext().ensureActive()
+                val signingSettings = settingsDataStore.userSettings.first()
                 val processorContext = ApkProcessorContext().apply {
                     this.context = this@RepackApkExecutor.context
                     apkPath = sourceApk.absolutePath
                     apkModificationConfig = ApkModificationConfig(
                         manifestModificationConfig = emptyList(),
                         dexModificationConfig = emptyList(),
-                        signConfig = SignConfig(),
+                        signConfig = signingSettings.toSignConfig(),
                         apkSavePath = unsignedApk.absolutePath,
                     )
                     processEventObservers.add(
@@ -174,6 +180,20 @@ class RepackApkExecutor @Inject constructor(
         return replace(Regex("""[^A-Za-z0-9._-]"""), "_").ifBlank { "repacked" }
     }
 
+    private fun UserSettings.toSignConfig(): SignConfig {
+        return when (repackSigningMode) {
+            RepackSigningMode.BuiltIn -> SignConfig()
+            RepackSigningMode.Custom -> SignConfig(
+                source = SignConfig.Source.Custom,
+                keyUri = customSigningKeyUri,
+                keyStoreType = customSigningKeyStoreType.ifBlank { SignConfig.DEFAULT_KEY_STORE_TYPE },
+                storePassword = customSigningStorePassword,
+                keyPassword = customSigningKeyPassword.ifBlank { customSigningStorePassword },
+                alias = customSigningKeyAlias,
+            )
+        }
+    }
+
     private fun deleteExistingOutputApks(outputDir: File, safeName: String) {
         outputDir.listFiles { file ->
             file.isFile &&
@@ -187,7 +207,7 @@ class RepackApkExecutor @Inject constructor(
     private companion object {
         val REQUIRED_ASSETS = listOf(
             "conf/killer_hook.dex",
-            "conf/killer.bks",
+            SignConfig.BUILT_IN_KEY_ASSET_PATH,
             "conf/v7a/libpine.so",
             "conf/v7a/killer-inject.so",
             "conf/v8a/libpine.so",
