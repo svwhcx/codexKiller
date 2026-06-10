@@ -71,11 +71,20 @@ class AddExtraConfModification : IApkModification {
                 killerDexIns!!
             )
         )
-        // 2. 添加额外的libpine.so文件
-        val v7aSo = apkProcessorContext.context.assets?.open("conf/v7a/libpine.so")
-        val v8aSo = apkProcessorContext.context.assets?.open("conf/v8a/libpine.so")
-        apkProcessorContext.extraDataNodes.add(ExtraDataNode("lib/armeabi-v7a/libpine.so", v7aSo!!))
-        apkProcessorContext.extraDataNodes.add(ExtraDataNode("lib/arm64-v8a/libpine.so", v8aSo!!))
+        val selectedAbis = InjectedAbiSelector.selectForCurrentDevice(
+            zipFile = apkProcessorContext.apkZipFile,
+            availableAbis = PINE_ABIS.map { it.apkLibDir },
+        )
+        PINE_ABIS
+            .filter { abi -> abi.apkLibDir in selectedAbis }
+            .forEach { abi ->
+                apkProcessorContext.extraDataNodes.add(
+                    ExtraDataNode(
+                        "lib/${abi.apkLibDir}/libpine.so",
+                        apkProcessorContext.context.assets.open(abi.assetPath),
+                    ),
+                )
+            }
         return this
     }
 
@@ -91,5 +100,22 @@ class AddExtraConfModification : IApkModification {
         }
     }
 
+    private data class PineAbi(
+        val apkLibDir: String,
+        val assetPath: String,
+    )
+
+    private companion object {
+        val PINE_ABIS = listOf(
+            PineAbi(
+                apkLibDir = "armeabi-v7a",
+                assetPath = "conf/v7a/libpine.so",
+            ),
+            PineAbi(
+                apkLibDir = "arm64-v8a",
+                assetPath = "conf/v8a/libpine.so",
+            ),
+        )
+    }
 
 }

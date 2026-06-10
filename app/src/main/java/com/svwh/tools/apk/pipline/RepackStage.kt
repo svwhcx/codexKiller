@@ -1,8 +1,11 @@
 ﻿package com.svwh.tools.apk.pipline
 
 import com.svwh.tools.apk.context.ApkProcessorContext
+import java.io.BufferedInputStream
+import java.io.BufferedOutputStream
 import java.io.FileOutputStream
 import java.io.InputStream
+import java.util.zip.Deflater
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 
@@ -19,10 +22,14 @@ class RepackStage : AbstractApkProcessor() {
 
     override fun doProcess(apkProcessorContext: ApkProcessorContext): ApkProcessorContext {
         setCurrentProcessor(this)
-        val fos = FileOutputStream(apkProcessorContext.apkModificationConfig.apkSavePath)
-        val zipOutputStream = ZipOutputStream(fos)
-        compileApk(zipOutputStream, apkProcessorContext)
-        zipOutputStream.close()
+        ZipOutputStream(
+            BufferedOutputStream(
+                FileOutputStream(apkProcessorContext.apkModificationConfig.apkSavePath),
+            ),
+        ).use { zipOutputStream ->
+            zipOutputStream.setLevel(Deflater.BEST_COMPRESSION)
+            compileApk(zipOutputStream, apkProcessorContext)
+        }
         return apkProcessorContext
     }
 
@@ -38,26 +45,23 @@ class RepackStage : AbstractApkProcessor() {
      */
     private fun compileApk(zos: ZipOutputStream, apkProcessorContext: ApkProcessorContext) {
         val zipFile = apkProcessorContext.apkZipFile
-        // 向assets目录下内置so文件。
-        zipFile.entries().asSequence().forEach {
-            // 单独处理资源文件
-            if (it.name == "resources.arsc") {
-                val zipEntry = ZipEntry(it.name)
-                zipEntry.method = ZipEntry.STORED
-                zipEntry.method = it.method
-                zipEntry.size = it.size
-                zipEntry.crc = it.crc
-                addFile2Apk(zos, zipEntry, zipFile.getInputStream(it))
+        val extraNodeNames = apkProcessorContext.extraDataNodes
+            .map { node -> node.nodeName }
+            .toSet()
+        zipFile.entries().asSequence().forEach { sourceEntry ->
+            if (sourceEntry.name in extraNodeNames || sourceEntry.isSignatureEntry()) {
                 return@forEach
             }
-            if (apkProcessorContext.extraDataNodes.find {item -> item.nodeName == it.name} != null) {
-                return@forEach
-            }
-            addFile2Apk(zos, ZipEntry(it.name), zipFile.getInputStream(it))
+            addFile2Apk(
+                zipOutputStream = zos,
+                zipEntry = sourceEntry.toOutputEntry(),
+                bais = BufferedInputStream(zipFile.getInputStream(sourceEntry)),
+            )
         }
-        apkProcessorContext.extraDataNodes.forEach {
-            addFile2Apk(zos, ZipEntry(it.nodeName), it.nodeDataIs)
-            it.nodeDataIs.close()
+        apkProcessorContext.extraDataNodes.forEach { node ->
+            node.nodeDataIs.use { inputStream ->
+                addFile2Apk(zos, ZipEntry(node.nodeName), inputStream)
+            }
         }
     }
 
@@ -70,12 +74,40 @@ class RepackStage : AbstractApkProcessor() {
         bais: InputStream
     ) {
         zipOutputStream.putNextEntry(zipEntry)
-        val buffer = ByteArray(1024)
+        val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
         var len: Int
         while (bais.read(buffer).also { len = it } > 0) {
             zipOutputStream.write(buffer, 0, len)
         }
         zipOutputStream.closeEntry()
+    }
+
+    private fun ZipEntry.toOutputEntry(): ZipEntry {
+        return ZipEntry(name).also { outputEntry ->
+            outputEntry.time = time
+            comment?.let { outputEntry.comment = it }
+            if (method == ZipEntry.STORED) {
+                outputEntry.method = ZipEntry.STORED
+                outputEntry.size = size
+                outputEntry.compressedSize = compressedSize
+                outputEntry.crc = crc
+                extra?.let { outputEntry.extra = it }
+            } else {
+                outputEntry.method = ZipEntry.DEFLATED
+            }
+        }
+    }
+
+    private fun ZipEntry.isSignatureEntry(): Boolean {
+        return APK_SIGNATURE_ENTRY_REGEX.matches(name)
+    }
+
+    private companion object {
+        const val DEFAULT_BUFFER_SIZE = 64 * 1024
+        val APK_SIGNATURE_ENTRY_REGEX = Regex(
+            """META-INF/[^/]+\.(RSA|DSA|EC|SF|MF)""",
+            RegexOption.IGNORE_CASE,
+        )
     }
 
 }

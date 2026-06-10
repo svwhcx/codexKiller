@@ -16,7 +16,11 @@ class AddFridaModification: IApkModification {
         val injectConfig = """
             {"interaction":{"type":"script","path":"/storage/emulated/0/Android/media/${apkProcessorContext.packageName}/frida/noenv/killer-frida.js","on_change": "ignore"}}
         """.trimIndent()
-        FRIDA_ABIS.forEach { abi ->
+        val selectedAbis = InjectedAbiSelector.selectForCurrentDevice(
+            zipFile = apkProcessorContext.apkZipFile,
+            availableAbis = FRIDA_ABIS.map { it.apkLibDir },
+        )
+        FRIDA_ABIS.filter { abi -> abi.apkLibDir in selectedAbis }.forEach { abi ->
             addFridaGadget(
                 apkProcessorContext = apkProcessorContext,
                 abiDir = abi.apkLibDir,
