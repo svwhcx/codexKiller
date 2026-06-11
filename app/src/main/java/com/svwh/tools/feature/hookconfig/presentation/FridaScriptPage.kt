@@ -6,6 +6,8 @@ import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -15,6 +17,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -28,6 +31,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
@@ -57,30 +61,37 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
@@ -101,6 +112,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import kotlinx.coroutines.launch
+import kotlin.math.abs
+import kotlin.math.hypot
 import com.svwh.tools.core.permission.rememberExternalStoragePermissionGate
 import com.svwh.tools.feature.hookconfig.domain.model.FridaScriptDraft
 import com.svwh.tools.feature.hookconfig.domain.model.FridaScriptItem
@@ -117,14 +130,19 @@ private val FridaEditorBg = Color(0xFFF7F9FF)
 private val FridaFieldHint = Color(0xFF9AA3B2)
 private val FridaErrorBg = Color(0xFFFFF0F1)
 private val FridaErrorText = Color(0xFFC62828)
-private val FridaCodeBg = Color(0xFF202634)
-private val FridaCodeText = Color(0xFFE8EDF7)
-private val FridaCodeGutterBg = Color(0xFF1A202C)
-private val FridaCodeGutterText = Color(0xFF778195)
-private val FridaCodeToolbarBg = Color(0xFFEDF3FF)
+private val FridaCodeBg = Color(0xFFFFFFFF)
+private val FridaCodeText = Color(0xFF1F2937)
+private val FridaCodeGutterBg = Color(0xFFF5F5F5)
+private val FridaCodeGutterText = Color(0xFFA8ADB5)
 private val FridaCodeSuggestionBg = Color(0xFF2B3445)
-private val FridaCodeScrollbarTrack = Color(0x334B5563)
-private val FridaCodeScrollbarThumb = Color(0xB4CBD5E1)
+private val FridaCodeLineHighlight = Color(0xFFFFF9E6)
+private val FridaCodeScrollbarTrack = Color(0xFFE5E7EB)
+private val FridaCodeScrollbarThumb = Color(0xFF9CA3AF)
+private const val FridaEditorDefaultFontSize = 13f
+private const val FridaEditorMinFontSize = 8f
+private const val FridaEditorMaxFontSize = 20f
+private const val FridaEditorLineHeightMultiplier = 1.45f
+private const val FridaEditorVisibleLinePadding = 2.6f
 
 private const val TEXT_EMPTY_FRIDA = "暂无 Frida 脚本"
 private const val TEXT_LOADING = "加载中..."
@@ -148,7 +166,6 @@ private val FridaSwitchHeight = 27.dp
 private val FridaSwitchThumbSize = 23.dp
 private val FridaListItemMinHeight = 74.dp
 private val FridaListActionSlotSize = 48.dp
-private val FridaEditorHorizontalScrollbarHeight = 12.dp
 private val FridaSuggestionRowHeight = 36.dp
 private val FridaSuggestionPopupVerticalPadding = 8.dp
 private val FridaKeywordSuggestions = listOf(
@@ -818,24 +835,47 @@ private fun FullScreenFridaScriptEditor(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(start = 14.dp, end = 14.dp, top = 2.dp, bottom = 14.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
+                    .padding(top = 2.dp, bottom = 14.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
-                FridaField(
-                    value = draft.name,
-                    icon = Icons.Outlined.Title,
-                    placeholder = TEXT_SCRIPT_NAME_PLACEHOLDER,
-                    minHeight = 42.dp,
-                    singleLine = true,
-                    onValueChange = { value -> onDraftChange { it.copy(name = value) } },
-                )
-                Text(
-                    text = TEXT_SCRIPT_CONTENT_LABEL,
-                    modifier = Modifier.padding(start = 2.dp, top = 4.dp),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = FridaTitle,
-                    fontWeight = FontWeight.SemiBold,
-                )
+                Box(modifier = Modifier.padding(horizontal = 14.dp)) {
+                    FridaField(
+                        value = draft.name,
+                        icon = Icons.Outlined.Title,
+                        placeholder = TEXT_SCRIPT_NAME_PLACEHOLDER,
+                        minHeight = 42.dp,
+                        singleLine = true,
+                        onValueChange = { value -> onDraftChange { it.copy(name = value) } },
+                    )
+                }
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 16.dp, end = 8.dp, top = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = TEXT_SCRIPT_CONTENT_LABEL,
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = FridaTitle,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    IconButton(
+                        onClick = {
+                            val formatted = formatFridaJavaScript(draft.scriptContent)
+                            onDraftChange { it.copy(scriptContent = formatted) }
+                        },
+                        modifier = Modifier.size(34.dp),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Code,
+                            contentDescription = TEXT_FORMAT,
+                            tint = FridaTitle,
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
+                }
                 FridaCodeEditor(
                     value = draft.scriptContent,
                     onValueChange = { value -> onDraftChange { it.copy(scriptContent = value) } },
@@ -947,34 +987,37 @@ private fun FridaCodeEditor(
     modifier: Modifier = Modifier,
 ) {
     var editorValue by remember { mutableStateOf(TextFieldValue(value)) }
-    var fontSize by remember { mutableFloatStateOf(13f) }
+    var fontSize by rememberSaveable { mutableStateOf(FridaEditorDefaultFontSize) }
+    var isPinching by remember { mutableStateOf(false) }
+    var editorBottomInWindowPx by remember { mutableStateOf(0f) }
+    var codeViewportWidthPx by remember { mutableStateOf(0) }
+    var codeTextLayoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
+    val latestFontSize by rememberUpdatedState(fontSize)
     val density = LocalDensity.current
+    val view = LocalView.current
     val coroutineScope = rememberCoroutineScope()
     val verticalScrollState = rememberScrollState()
     val horizontalScrollState = rememberScrollState()
     val lines = remember(editorValue.text) { editorValue.text.split('\n').ifEmpty { listOf("") } }
-    val editorMinWidth = remember(editorValue.text, fontSize) {
-        val maxLineLength = lines.maxOfOrNull { it.length } ?: 0
-        val estimatedWidth = (maxLineLength.coerceAtLeast(80) * fontSize * 0.62f).dp
-        if (estimatedWidth < 720.dp) 720.dp else estimatedWidth
+    val lineCount = lines.size.coerceAtLeast(1)
+    val lineNumbersText = remember(lineCount) {
+        (1..lineCount).joinToString(separator = "\n") { " $it" }
     }
-    val cursorPosition = remember(editorValue) {
+    val activeLineIndex = remember(editorValue.text, editorValue.selection, lineCount) {
         cursorLineColumn(
             script = editorValue.text,
-            cursor = editorValue.selection.start,
-        )
+            cursor = editorValue.selection.end,
+        ).line.coerceIn(0, lineCount - 1)
     }
-    val suggestionOffsetX = (cursorPosition.column * fontSize * 0.62f).dp
-    val suggestionOffsetY = ((cursorPosition.line + 1) * fontSize * 1.45f).dp + 4.dp
-    val verticalScrollOffset = with(density) { verticalScrollState.value.toDp() }
-    val horizontalScrollOffset = with(density) { horizontalScrollState.value.toDp() }
-    val popupX = (58.dp + suggestionOffsetX - horizontalScrollOffset).coerceAtLeast(54.dp)
-    val suggestions = remember(editorValue) {
-        buildFridaSuggestions(
-            script = editorValue.text,
-            cursor = editorValue.selection.start,
-        )
+    val editorMinWidth = remember(lines, fontSize) {
+        val maxLineLength = lines.maxOfOrNull { it.length } ?: 0
+        val estimatedWidth = (maxLineLength.coerceAtLeast(1) * fontSize * 0.72f).dp
+        estimatedWidth.coerceAtLeast(1.dp)
     }
+    val editorTouchableMinWidth = maxOf(
+        editorMinWidth,
+        with(density) { codeViewportWidthPx.toDp() },
+    )
 
     LaunchedEffect(value) {
         if (value != editorValue.text) {
@@ -988,229 +1031,248 @@ private fun FridaCodeEditor(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .shadow(
-                elevation = 12.dp,
-                shape = RoundedCornerShape(14.dp),
-                ambientColor = FridaShadow,
-                spotColor = FridaShadow,
-            )
-            .background(FridaCodeBg, RoundedCornerShape(14.dp)),
+            .background(FridaCodeBg),
     ) {
-        FridaCodeToolbar(
-            fontSize = fontSize,
-            onZoomOut = { fontSize = (fontSize - 1f).coerceAtLeast(11f) },
-            onZoomIn = { fontSize = (fontSize + 1f).coerceAtMost(18f) },
-            onFormat = {
-                val formatted = formatFridaJavaScript(editorValue.text)
-                editorValue = TextFieldValue(
-                    text = formatted,
-                    selection = TextRange(formatted.length),
-                )
-                onValueChange(formatted)
-            },
-        )
-
         BoxWithConstraints(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f),
         ) {
-            val viewportHeight = if (maxHeight > FridaEditorHorizontalScrollbarHeight + 160.dp) {
-                maxHeight - FridaEditorHorizontalScrollbarHeight
-            } else {
-                160.dp
-            }
-            val visibleLineCount = with(density) {
-                (viewportHeight.toPx() / (fontSize.sp.toPx() * 1.45f)).toInt().coerceAtLeast(1)
-            }
-            val lineNumberCount = lines.size.coerceAtLeast(visibleLineCount)
-            val popupHeight = (FridaSuggestionRowHeight * suggestions.size.coerceAtMost(5)) +
-                (FridaSuggestionPopupVerticalPadding * 2)
-            val popupMaxY = if (viewportHeight - popupHeight - 8.dp < 12.dp) {
-                12.dp
-            } else {
-                viewportHeight - popupHeight - 8.dp
-            }
-            val popupY = (12.dp + suggestionOffsetY - verticalScrollOffset).coerceIn(
-                minimumValue = 12.dp,
-                maximumValue = popupMaxY,
+            val viewportHeight = if (maxHeight < 160.dp) 160.dp else maxHeight
+            val lineHeight = (fontSize * FridaEditorLineHeightMultiplier).sp
+            val codeTextStyle = TextStyle(
+                color = FridaCodeText,
+                fontSize = fontSize.sp,
+                fontFamily = FontFamily.Monospace,
+                lineHeight = lineHeight,
             )
+            val lineNumberTextStyle = codeTextStyle.copy(
+                color = FridaCodeGutterText,
+                textAlign = TextAlign.End,
+            )
+            val lineHeightDp = with(density) { lineHeight.toPx().toDp() }
+            val viewportHeightPx = with(density) { viewportHeight.toPx() }
+            val lineHeightPx = with(density) { lineHeightDp.toPx() }
+            val imeBottomPx = WindowInsets.ime.getBottom(density)
+            val imeTopPx = (view.height - imeBottomPx).toFloat()
+            val keyboardOverlapPx = if (view.height > 0 && imeBottomPx > 0 && editorBottomInWindowPx > imeTopPx) {
+                (editorBottomInWindowPx - imeTopPx).coerceIn(0f, viewportHeightPx)
+            } else {
+                0f
+            }
+            val keyboardOverlapDp = with(density) { keyboardOverlapPx.toDp() }
+            val keyboardOverlapKey = keyboardOverlapPx.toInt()
+            val bottomReserveHeight = maxOf(viewportHeight * 0.35f, 72.dp) + keyboardOverlapDp
+            val contentHeight = (lineHeightDp * lineCount + bottomReserveHeight).coerceAtLeast(viewportHeight)
+            val textLayout = codeTextLayoutResult
+            val activeLayoutLine = textLayout
+                ?.let { activeLineIndex.coerceIn(0, (it.lineCount - 1).coerceAtLeast(0)) }
+            val activeLineTopPx = if (activeLayoutLine != null && textLayout != null) {
+                textLayout.getLineTop(activeLayoutLine)
+            } else {
+                activeLineIndex * lineHeightPx
+            }
+            val activeLineBottomPx = if (activeLayoutLine != null && textLayout != null) {
+                textLayout.getLineBottom(activeLayoutLine)
+            } else {
+                activeLineTopPx + lineHeightPx
+            }
+            val activeHighlightTop = with(density) { activeLineTopPx.toDp() }
+            val activeHighlightHeight = with(density) {
+                (activeLineBottomPx - activeLineTopPx).coerceAtLeast(lineHeightPx).toDp()
+            }
 
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(viewportHeight)
-                    .verticalScroll(verticalScrollState),
+            LaunchedEffect(
+                activeLineIndex,
+                activeLineTopPx.toInt(),
+                activeLineBottomPx.toInt(),
+                viewportHeightPx.toInt(),
+                keyboardOverlapKey,
+                verticalScrollState.maxValue,
+                isPinching,
             ) {
-                Column(
+                if (isPinching) return@LaunchedEffect
+
+                val bottomPadding = lineHeightPx * FridaEditorVisibleLinePadding
+                val topPadding = lineHeightPx * 0.6f
+                val effectiveViewportHeight = (viewportHeightPx - keyboardOverlapPx)
+                    .coerceAtLeast(lineHeightPx * 3f)
+                val currentTop = verticalScrollState.value.toFloat()
+                val visibleTop = currentTop + topPadding
+                val visibleBottom = currentTop + effectiveViewportHeight - bottomPadding
+                val target = when {
+                    activeLineTopPx < visibleTop -> activeLineTopPx - topPadding
+                    activeLineBottomPx > visibleBottom -> activeLineBottomPx - effectiveViewportHeight + bottomPadding
+                    else -> null
+                }?.toInt()?.coerceIn(0, verticalScrollState.maxValue)
+
+                if (target != null && abs(target - verticalScrollState.value) > 1) {
+                    verticalScrollState.scrollTo(target)
+                }
+            }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .onGloballyPositioned { coordinates ->
+                        editorBottomInWindowPx = coordinates.positionInWindow().y + coordinates.size.height
+                    }
+                    .pointerInput(Unit) {
+                        awaitEachGesture {
+                            awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                            var previousDistance = 0f
+                            var gestureFontSize = latestFontSize
+                            var hasPressedPointers = true
+                            try {
+                                do {
+                                    val event = awaitPointerEvent(PointerEventPass.Initial)
+                                    val pressed = event.changes.filter { it.pressed }
+                                    hasPressedPointers = pressed.isNotEmpty()
+                                    if (pressed.size >= 2) {
+                                        val distance = distanceBetween(
+                                            first = pressed[0].position,
+                                            second = pressed[1].position,
+                                        )
+                                        if (previousDistance > 0f && distance > 0f) {
+                                            val zoomChange = distance / previousDistance
+                                            if (abs(zoomChange - 1f) > 0.008f) {
+                                                gestureFontSize = (gestureFontSize * zoomChange)
+                                                    .coerceIn(FridaEditorMinFontSize, FridaEditorMaxFontSize)
+                                                fontSize = gestureFontSize
+                                            }
+                                        }
+                                        previousDistance = distance
+                                        isPinching = true
+                                        pressed.forEach { it.consume() }
+                                    } else {
+                                        previousDistance = 0f
+                                    }
+                                } while (hasPressedPointers)
+                            } finally {
+                                isPinching = false
+                            }
+                        }
+                    },
+            ) {
+                Row(
                     modifier = Modifier
-                        .width(46.dp)
-                        .background(FridaCodeGutterBg)
-                        .padding(top = 12.dp, bottom = 12.dp),
-                    horizontalAlignment = Alignment.End,
+                        .fillMaxWidth()
+                        .height(viewportHeight),
                 ) {
-                    repeat(lineNumberCount) { index ->
-                        Text(
-                            text = "${index + 1}",
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(viewportHeight)
+                            .verticalScroll(
+                                state = verticalScrollState,
+                                enabled = !isPinching,
+                            ),
+                    ) {
+                        Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(end = 9.dp),
-                            color = FridaCodeGutterText,
-                            fontSize = fontSize.sp,
-                            fontFamily = FontFamily.Monospace,
-                            lineHeight = (fontSize * 1.45f).sp,
-                            textAlign = TextAlign.End,
-                        )
-                    }
-                }
-
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(viewportHeight)
-                        .horizontalScroll(horizontalScrollState)
-                        .padding(12.dp),
-                ) {
-                    BasicTextField(
-                        value = editorValue,
-                        onValueChange = { next ->
-                            val adjusted = applySmartIndentOnEnter(
-                                previous = editorValue,
-                                next = next,
+                                .height(contentHeight),
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(activeHighlightHeight)
+                                    .offset(y = activeHighlightTop)
+                                    .background(FridaCodeLineHighlight),
                             )
-                            editorValue = adjusted
-                            onValueChange(adjusted.text)
-                        },
-                        textStyle = TextStyle(
-                            color = FridaCodeText,
-                            fontSize = fontSize.sp,
-                            fontFamily = FontFamily.Monospace,
-                            lineHeight = (fontSize * 1.45f).sp,
-                        ),
-                        visualTransformation = remember(FridaCodeBg) {
-                            FridaJavaScriptHighlightTransformation(FridaCodeBg)
-                        },
-                        modifier = Modifier
-                            .widthIn(min = editorMinWidth)
-                            .defaultMinSize(minHeight = viewportHeight - 24.dp)
-                            .fillMaxWidth(),
-                        decorationBox = { innerTextField ->
-                            Box {
-                                innerTextField()
+
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(contentHeight),
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .background(FridaCodeGutterBg)
+                                        .height(contentHeight),
+                                    contentAlignment = Alignment.TopEnd,
+                                ) {
+                                    Text(
+                                        text = lineNumbersText,
+                                        modifier = Modifier
+                                            .background(FridaCodeGutterBg)
+                                            .padding(end = 1.dp),
+                                        style = lineNumberTextStyle,
+                                    )
+                                }
+
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(contentHeight)
+                                        .onSizeChanged { size ->
+                                            codeViewportWidthPx = size.width
+                                        }
+                                        .horizontalScroll(
+                                            state = horizontalScrollState,
+                                            enabled = !isPinching,
+                                        ),
+                                ) {
+                                    BasicTextField(
+                                        value = editorValue,
+                                        onValueChange = { next ->
+                                            val adjusted = applySmartIndentOnEnter(
+                                                previous = editorValue,
+                                                next = next,
+                                            )
+                                            editorValue = adjusted
+                                            onValueChange(adjusted.text)
+                                        },
+                                        textStyle = codeTextStyle,
+                                        onTextLayout = { codeTextLayoutResult = it },
+                                        modifier = Modifier
+                                            .widthIn(min = editorTouchableMinWidth)
+                                            .height(contentHeight)
+                                            .fillMaxWidth(),
+                                        decorationBox = { innerTextField ->
+                                            Box {
+                                                innerTextField()
+                                            }
+                                        },
+                                    )
+                                }
                             }
-                        },
-                    )
+                        }
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .width(7.dp)
+                            .height(viewportHeight)
+                            .background(FridaCodeScrollbarTrack),
+                    ) {
+                        if (!isPinching) {
+                            FridaVerticalScrollbar(
+                                scrollState = verticalScrollState,
+                                onDrag = { delta ->
+                                    coroutineScope.launch {
+                                        verticalScrollState.scrollTo(
+                                            (verticalScrollState.value + delta).coerceIn(0, verticalScrollState.maxValue),
+                                        )
+                                    }
+                                },
+                                modifier = Modifier
+                                    .fillMaxHeight()
+                                    .fillMaxWidth(),
+                            )
+                        }
+                    }
                 }
             }
-
-            if (suggestions.isNotEmpty()) {
-                FridaSuggestionPopup(
-                    suggestions = suggestions,
-                    onSelect = { suggestion ->
-                        val next = applySuggestion(editorValue, suggestion)
-                        editorValue = next
-                        onValueChange(next.text)
-                    },
-                    modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .offset(x = popupX, y = popupY)
-                        .zIndex(2f),
-                )
-            }
-
-            FridaVerticalScrollbar(
-                scrollState = verticalScrollState,
-                onDrag = { delta ->
-                    coroutineScope.launch {
-                        verticalScrollState.scrollTo(
-                            (verticalScrollState.value + delta).coerceIn(0, verticalScrollState.maxValue),
-                        )
-                    }
-                },
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(top = 8.dp, end = 5.dp)
-                    .height(viewportHeight - 20.dp)
-                    .width(6.dp),
-            )
-            FridaHorizontalScrollbar(
-                scrollState = horizontalScrollState,
-                onDrag = { delta ->
-                    coroutineScope.launch {
-                        horizontalScrollState.scrollTo(
-                            (horizontalScrollState.value + delta).coerceIn(0, horizontalScrollState.maxValue),
-                        )
-                    }
-                },
-                modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .padding(start = 52.dp, end = 16.dp, bottom = 4.dp)
-                    .fillMaxWidth()
-                    .height(6.dp),
-            )
         }
     }
 }
 
-@Composable
-private fun FridaCodeToolbar(
-    fontSize: Float,
-    onZoomOut: () -> Unit,
-    onZoomIn: () -> Unit,
-    onFormat: () -> Unit,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(FridaCodeToolbarBg, RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp))
-            .padding(horizontal = 10.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Text(
-            text = "JS",
-            modifier = Modifier
-                .background(HookConfigPrimaryBlue, RoundedCornerShape(6.dp))
-                .padding(horizontal = 8.dp, vertical = 4.dp),
-            color = Color.White,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.SemiBold,
-        )
-        Text(
-            text = "${fontSize.toInt()}sp",
-            modifier = Modifier.weight(1f),
-            color = FridaTitle,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Medium,
-        )
-        TextButton(
-            onClick = onZoomOut,
-            modifier = Modifier.requiredHeight(32.dp),
-            contentPadding = PaddingValues(horizontal = 10.dp),
-        ) {
-            Text("A-", fontWeight = FontWeight.SemiBold)
-        }
-        TextButton(
-            onClick = onZoomIn,
-            modifier = Modifier.requiredHeight(32.dp),
-            contentPadding = PaddingValues(horizontal = 10.dp),
-        ) {
-            Text("A+", fontWeight = FontWeight.SemiBold)
-        }
-        Button(
-            onClick = onFormat,
-            modifier = Modifier.requiredHeight(32.dp),
-            shape = RoundedCornerShape(8.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = HookConfigPrimaryBlue,
-                contentColor = Color.White,
-            ),
-            elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp),
-            contentPadding = PaddingValues(horizontal = 12.dp),
-        ) {
-            Text(TEXT_FORMAT, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-        }
-    }
+private fun distanceBetween(first: Offset, second: Offset): Float {
+    return hypot(
+        x = second.x - first.x,
+        y = second.y - first.y,
+    )
 }
 
 @Composable
@@ -1221,10 +1283,10 @@ private fun FridaVerticalScrollbar(
 ) {
     if (scrollState.maxValue <= 0) return
     val progress = scrollState.value.toFloat() / scrollState.maxValue.toFloat()
+    val density = LocalDensity.current
 
     BoxWithConstraints(
         modifier = modifier
-            .clip(RoundedCornerShape(999.dp))
             .background(FridaCodeScrollbarTrack)
             .pointerInput(scrollState.maxValue) {
                 detectDragGestures { change, dragAmount ->
@@ -1235,49 +1297,16 @@ private fun FridaVerticalScrollbar(
                 }
             },
     ) {
-        val thumbHeight = (maxHeight * 0.28f).coerceAtLeast(34.dp)
+        val trackHeightPx = with(density) { maxHeight.toPx() }.coerceAtLeast(1f)
+        val contentHeightPx = trackHeightPx + scrollState.maxValue
+        val visibleRatio = (trackHeightPx / contentHeightPx).coerceIn(0.08f, 1f)
+        val thumbHeight = (maxHeight * visibleRatio).coerceAtLeast(28.dp)
         val thumbOffset = (maxHeight - thumbHeight) * progress
         Box(
             modifier = Modifier
                 .offset(y = thumbOffset)
                 .fillMaxWidth()
                 .height(thumbHeight)
-                .clip(RoundedCornerShape(999.dp))
-                .background(FridaCodeScrollbarThumb),
-        )
-    }
-}
-
-@Composable
-private fun FridaHorizontalScrollbar(
-    scrollState: ScrollState,
-    onDrag: (Int) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    if (scrollState.maxValue <= 0) return
-    val progress = scrollState.value.toFloat() / scrollState.maxValue.toFloat()
-
-    BoxWithConstraints(
-        modifier = modifier
-            .clip(RoundedCornerShape(999.dp))
-            .background(FridaCodeScrollbarTrack)
-            .pointerInput(scrollState.maxValue) {
-                detectDragGestures { change, dragAmount ->
-                    change.consume()
-                    val track = size.width.toFloat().coerceAtLeast(1f)
-                    val scrollDelta = (dragAmount.x / track * scrollState.maxValue).toInt()
-                    onDrag(scrollDelta)
-                }
-            },
-    ) {
-        val thumbWidth = (maxWidth * 0.32f).coerceAtLeast(42.dp)
-        val thumbOffset = (maxWidth - thumbWidth) * progress
-        Box(
-            modifier = Modifier
-                .offset(x = thumbOffset)
-                .fillMaxHeight()
-                .width(thumbWidth)
-                .clip(RoundedCornerShape(999.dp))
                 .background(FridaCodeScrollbarThumb),
         )
     }
