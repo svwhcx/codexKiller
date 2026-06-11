@@ -997,8 +997,8 @@ private fun FridaCodeEditor(
     val coroutineScope = rememberCoroutineScope()
     val verticalScrollState = rememberScrollState()
     val horizontalScrollState = rememberScrollState()
-    val highlightedText = remember(value) {
-        highlightFridaJavaScript(value, FridaJavaScriptHighlightConfig.lightStyle)
+    val highlightedText = remember(editorValue.text) {
+        highlightFridaJavaScript(editorValue.text, FridaJavaScriptHighlightConfig.lightStyle)
     }
     val javaScriptHighlightTransformation = remember(highlightedText) {
         CachedHighlightTransformation(highlightedText)
@@ -1439,8 +1439,14 @@ private class CachedHighlightTransformation(
     private val cachedText: AnnotatedString,
 ) : VisualTransformation {
     override fun filter(text: AnnotatedString): TransformedText {
+        val wideSpaceText = buildAnnotatedString {
+            append(cachedText.text.replace(' ', ' '))
+            cachedText.spanStyles.forEach { range ->
+                addStyle(range.item, range.start, range.end)
+            }
+        }
         return TransformedText(
-            text = cachedText,
+            text = wideSpaceText,
             offsetMapping = OffsetMapping.Identity,
         )
     }
@@ -1565,7 +1571,7 @@ private fun applySmartIndentOnEnter(
     }
     val previousLine = beforeNewline.substring(currentLineStart)
     val baseIndent = previousLine.takeWhile { it == ' ' || it == '\t' }
-    val extraIndent = if (previousLine.trimEnd().endsWith("{")) "  " else ""
+    val extraIndent = if (previousLine.trimEnd().endsWith("{")) " " else ""
     val indent = baseIndent + extraIndent
     if (indent.isEmpty()) return next
 
@@ -1579,26 +1585,33 @@ private fun applySmartIndentOnEnter(
 
 private fun formatFridaJavaScript(script: String): String {
     if (script.isBlank()) return script
-    val normalized = script
-        .replace("\r\n", "\n")
-        .replace("\r", "\n")
-    val tokens = normalized
-        .replace("{", "{\n")
-        .replace("}", "\n}\n")
-        .replace(";", ";\n")
-        .lines()
-        .map { it.trim() }
-        .filter { it.isNotEmpty() }
 
+    val lines = script.lines()
+    val result = StringBuilder()
     var indent = 0
-    return tokens.joinToString("\n") { line ->
-        if (line.startsWith("}")) {
-            indent = (indent - 1).coerceAtLeast(0)
+
+    for (line in lines) {
+        val trimmed = line.trim()
+        if (trimmed.isEmpty()) {
+            result.appendLine()
+            continue
         }
-        val formatted = "  ".repeat(indent) + line
-        if (line.endsWith("{")) {
-            indent++
+
+        var lineIndent = indent
+
+        if (trimmed.startsWith("}") || trimmed.startsWith("]") || trimmed.startsWith(")")) {
+            lineIndent = (indent - 1).coerceAtLeast(0)
         }
-        formatted
+
+        result.append(" ".repeat(lineIndent)).appendLine(trimmed)
+
+        for (char in trimmed) {
+            when (char) {
+                '{', '[', '(' -> indent++
+                '}', ']', ')' -> indent = (indent - 1).coerceAtLeast(0)
+            }
+        }
     }
+
+    return result.toString().trimEnd()
 }
