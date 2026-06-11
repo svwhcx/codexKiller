@@ -997,8 +997,11 @@ private fun FridaCodeEditor(
     val coroutineScope = rememberCoroutineScope()
     val verticalScrollState = rememberScrollState()
     val horizontalScrollState = rememberScrollState()
-    val javaScriptHighlightTransformation = remember {
-        FridaJavaScriptHighlightTransformation(FridaJavaScriptHighlightConfig.lightStyle)
+    val highlightedText = remember(value) {
+        highlightFridaJavaScript(value, FridaJavaScriptHighlightConfig.lightStyle)
+    }
+    val javaScriptHighlightTransformation = remember(highlightedText) {
+        CachedHighlightTransformation(highlightedText)
     }
     val lines = remember(editorValue.text) { editorValue.text.split('\n').ifEmpty { listOf("") } }
     val lineCount = lines.size.coerceAtLeast(1)
@@ -1432,6 +1435,17 @@ private fun cursorLineColumn(
     return CursorLineColumn(line = line, column = column)
 }
 
+private class CachedHighlightTransformation(
+    private val cachedText: AnnotatedString,
+) : VisualTransformation {
+    override fun filter(text: AnnotatedString): TransformedText {
+        return TransformedText(
+            text = cachedText,
+            offsetMapping = OffsetMapping.Identity,
+        )
+    }
+}
+
 private class FridaJavaScriptHighlightTransformation(
     private val style: FridaJavaScriptHighlightStyle,
 ) : VisualTransformation {
@@ -1450,36 +1464,14 @@ private fun highlightFridaJavaScript(
     return buildAnnotatedString {
         append(script)
 
-        highlightRegex(script, Regex("""//[^\n]*|/\*[\s\S]*?\*/"""), style.comment)
-        highlightRegex(
-            script,
-            Regex("""(?:"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|`(?:\\.|[^`\\])*`)"""),
-            style.string,
-        )
-        highlightRegex(script, Regex("""\b\d+(?:\.\d+)?\b"""), style.number)
-        highlightRegex(
-            script,
-            Regex("""\bfunction\s+([A-Za-z_$][\w$]*)"""),
-            style.functionName,
-            groupIndex = 1,
-        )
-        highlightRegex(
-            script,
-            Regex("""\b([A-Za-z_$][\w$]*)\s*(?=\()"""),
-            style.functionName,
-            groupIndex = 1,
-        )
-        highlightRegex(
-            script,
-            Regex("""\b(${FridaJavaScriptHighlightConfig.javaScriptKeywords.joinToString("|")})\b"""),
-            style.keyword,
-        )
-        highlightRegex(
-            script,
-            Regex("""\b(${FridaJavaScriptHighlightConfig.fridaApiNames.joinToString("|")})\b"""),
-            style.fridaApi,
-        )
-        highlightRegex(script, Regex("""[{}()\[\].,;:]"""), style.punctuation)
+        highlightRegex(script, FridaJavaScriptHighlightConfig.commentRegex, style.comment)
+        highlightRegex(script, FridaJavaScriptHighlightConfig.stringRegex, style.string)
+        highlightRegex(script, FridaJavaScriptHighlightConfig.numberRegex, style.number)
+        highlightRegex(script, FridaJavaScriptHighlightConfig.functionDeclarationRegex, style.functionName, groupIndex = 1)
+        highlightRegex(script, FridaJavaScriptHighlightConfig.functionCallRegex, style.functionName, groupIndex = 1)
+        highlightRegex(script, FridaJavaScriptHighlightConfig.keywordRegex, style.keyword)
+        highlightRegex(script, FridaJavaScriptHighlightConfig.fridaApiRegex, style.fridaApi)
+        highlightRegex(script, FridaJavaScriptHighlightConfig.punctuationRegex, style.punctuation)
     }
 }
 

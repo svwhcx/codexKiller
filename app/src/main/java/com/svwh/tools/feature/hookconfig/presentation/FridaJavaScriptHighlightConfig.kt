@@ -16,8 +16,8 @@ internal data class FridaJavaScriptHighlightStyle(
 
 internal object FridaJavaScriptHighlightConfig {
     val lightStyle = FridaJavaScriptHighlightStyle(
-        keyword = SpanStyle(color = Color(0xFF0033CC), fontWeight = FontWeight.SemiBold),
-        fridaApi = SpanStyle(color = Color(0xFF008A2E), fontWeight = FontWeight.SemiBold),
+        keyword = SpanStyle(color = Color(0xFF0033CC)),
+        fridaApi = SpanStyle(color = Color(0xFF008A2E)),
         string = SpanStyle(color = Color(0xFF008A2E)),
         number = SpanStyle(color = Color(0xFF1F2937)),
         comment = SpanStyle(color = Color(0xFF9AA0A6)),
