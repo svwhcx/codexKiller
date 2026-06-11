@@ -78,7 +78,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -998,6 +997,9 @@ private fun FridaCodeEditor(
     val coroutineScope = rememberCoroutineScope()
     val verticalScrollState = rememberScrollState()
     val horizontalScrollState = rememberScrollState()
+    val javaScriptHighlightTransformation = remember {
+        FridaJavaScriptHighlightTransformation(FridaJavaScriptHighlightConfig.lightStyle)
+    }
     val lines = remember(editorValue.text) { editorValue.text.split('\n').ifEmpty { listOf("") } }
     val lineCount = lines.size.coerceAtLeast(1)
     val lineNumbersText = remember(lineCount) {
@@ -1224,6 +1226,7 @@ private fun FridaCodeEditor(
                                             onValueChange(adjusted.text)
                                         },
                                         textStyle = codeTextStyle,
+                                        visualTransformation = javaScriptHighlightTransformation,
                                         onTextLayout = { codeTextLayoutResult = it },
                                         modifier = Modifier
                                             .widthIn(min = editorTouchableMinWidth)
@@ -1430,158 +1433,53 @@ private fun cursorLineColumn(
 }
 
 private class FridaJavaScriptHighlightTransformation(
-    backgroundColor: Color,
+    private val style: FridaJavaScriptHighlightStyle,
 ) : VisualTransformation {
-    private val palette = FridaHighlightPalette.from(backgroundColor)
-
     override fun filter(text: AnnotatedString): TransformedText {
         return TransformedText(
-            text = highlightFridaJavaScript(text.text, palette),
+            text = highlightFridaJavaScript(text.text, style),
             offsetMapping = OffsetMapping.Identity,
         )
     }
 }
 
-private data class FridaHighlightPalette(
-    val keyword: Color,
-    val fridaApi: Color,
-    val string: Color,
-    val number: Color,
-    val comment: Color,
-    val functionName: Color,
-    val punctuation: Color,
-) {
-    companion object {
-        fun from(backgroundColor: Color): FridaHighlightPalette {
-            val dark = backgroundColor.luminance() < 0.5f
-            return if (dark) {
-                FridaHighlightPalette(
-                    keyword = Color(0xFF7DD3FC),
-                    fridaApi = Color(0xFFA7F3D0),
-                    string = Color(0xFFFDE68A),
-                    number = Color(0xFFF0ABFC),
-                    comment = Color(0xFF94A3B8),
-                    functionName = Color(0xFFFDBA74),
-                    punctuation = Color(0xFFCBD5E1),
-                )
-            } else {
-                FridaHighlightPalette(
-                    keyword = Color(0xFF075985),
-                    fridaApi = Color(0xFF047857),
-                    string = Color(0xFF92400E),
-                    number = Color(0xFF86198F),
-                    comment = Color(0xFF64748B),
-                    functionName = Color(0xFFC2410C),
-                    punctuation = Color(0xFF475569),
-                )
-            }
-        }
-    }
-}
-
-private val JavaScriptKeywords = setOf(
-    "async",
-    "await",
-    "break",
-    "case",
-    "catch",
-    "class",
-    "const",
-    "continue",
-    "debugger",
-    "default",
-    "delete",
-    "do",
-    "else",
-    "export",
-    "extends",
-    "false",
-    "finally",
-    "for",
-    "function",
-    "if",
-    "import",
-    "in",
-    "instanceof",
-    "let",
-    "new",
-    "null",
-    "return",
-    "switch",
-    "this",
-    "throw",
-    "true",
-    "try",
-    "typeof",
-    "undefined",
-    "var",
-    "void",
-    "while",
-    "yield",
-)
-
-private val FridaApiNames = setOf(
-    "Java",
-    "Interceptor",
-    "Module",
-    "Memory",
-    "NativeFunction",
-    "NativeCallback",
-    "Process",
-    "Thread",
-    "ObjC",
-    "DebugSymbol",
-    "ptr",
-    "send",
-    "recv",
-    "console",
-    "log",
-    "perform",
-    "use",
-    "attach",
-    "implementation",
-    "findExportByName",
-    "readUtf8String",
-    "writeUtf8String",
-)
-
 private fun highlightFridaJavaScript(
     script: String,
-    palette: FridaHighlightPalette,
+    style: FridaJavaScriptHighlightStyle,
 ): AnnotatedString {
     return buildAnnotatedString {
         append(script)
 
-        highlightRegex(script, Regex("""//[^\n]*|/\*[\s\S]*?\*/"""), SpanStyle(color = palette.comment))
+        highlightRegex(script, Regex("""//[^\n]*|/\*[\s\S]*?\*/"""), style.comment)
         highlightRegex(
             script,
             Regex("""(?:"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|`(?:\\.|[^`\\])*`)"""),
-            SpanStyle(color = palette.string),
+            style.string,
         )
-        highlightRegex(script, Regex("""\b\d+(?:\.\d+)?\b"""), SpanStyle(color = palette.number))
+        highlightRegex(script, Regex("""\b\d+(?:\.\d+)?\b"""), style.number)
         highlightRegex(
             script,
             Regex("""\bfunction\s+([A-Za-z_$][\w$]*)"""),
-            SpanStyle(color = palette.functionName, fontWeight = FontWeight.SemiBold),
+            style.functionName,
             groupIndex = 1,
         )
         highlightRegex(
             script,
             Regex("""\b([A-Za-z_$][\w$]*)\s*(?=\()"""),
-            SpanStyle(color = palette.functionName),
+            style.functionName,
             groupIndex = 1,
         )
         highlightRegex(
             script,
-            Regex("""\b(${JavaScriptKeywords.joinToString("|")})\b"""),
-            SpanStyle(color = palette.keyword, fontWeight = FontWeight.SemiBold),
+            Regex("""\b(${FridaJavaScriptHighlightConfig.javaScriptKeywords.joinToString("|")})\b"""),
+            style.keyword,
         )
         highlightRegex(
             script,
-            Regex("""\b(${FridaApiNames.joinToString("|")})\b"""),
-            SpanStyle(color = palette.fridaApi, fontWeight = FontWeight.SemiBold),
+            Regex("""\b(${FridaJavaScriptHighlightConfig.fridaApiNames.joinToString("|")})\b"""),
+            style.fridaApi,
         )
-        highlightRegex(script, Regex("""[{}()\[\].,;:]"""), SpanStyle(color = palette.punctuation))
+        highlightRegex(script, Regex("""[{}()\[\].,;:]"""), style.punctuation)
     }
 }
 
