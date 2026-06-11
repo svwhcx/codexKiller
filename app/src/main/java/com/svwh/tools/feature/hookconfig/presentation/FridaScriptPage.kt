@@ -1,4 +1,4 @@
-package com.svwh.tools.feature.hookconfig.presentation
+﻿package com.svwh.tools.feature.hookconfig.presentation
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.BorderStroke
@@ -1457,14 +1457,8 @@ private class CachedHighlightTransformation(
     private val cachedText: AnnotatedString,
 ) : VisualTransformation {
     override fun filter(text: AnnotatedString): TransformedText {
-        val wideSpaceText = buildAnnotatedString {
-            append(cachedText.text.replace(' ', ' '))
-            cachedText.spanStyles.forEach { range ->
-                addStyle(range.item, range.start, range.end)
-            }
-        }
         return TransformedText(
-            text = wideSpaceText,
+            text = cachedText,
             offsetMapping = OffsetMapping.Identity,
         )
     }
@@ -1589,7 +1583,7 @@ private fun applySmartIndentOnEnter(
     }
     val previousLine = beforeNewline.substring(currentLineStart)
     val baseIndent = previousLine.takeWhile { it == ' ' || it == '\t' }
-    val extraIndent = if (previousLine.trimEnd().endsWith("{")) " " else ""
+    val extraIndent = if (previousLine.trimEnd().endsWith("{")) "    " else ""
     val indent = baseIndent + extraIndent
     if (indent.isEmpty()) return next
 
@@ -1604,32 +1598,132 @@ private fun applySmartIndentOnEnter(
 private fun formatFridaJavaScript(script: String): String {
     if (script.isBlank()) return script
 
-    val lines = script.lines()
+    val tokens = tokenizeForFormat(script)
     val result = StringBuilder()
     var indent = 0
 
-    for (line in lines) {
-        val trimmed = line.trim()
-        if (trimmed.isEmpty()) {
-            result.appendLine()
-            continue
-        }
+    for (i in tokens.indices) {
+        val token = tokens[i]
+        val prev = tokens.getOrNull(i - 1)
+        val next = tokens.getOrNull(i + 1)
 
-        var lineIndent = indent
+        when (token) {
+            "{" -> {
+                if (!result.endsWith("\n") && !result.endsWith(" ") && result.isNotEmpty()) {
+                    result.append(" ")
+                }
+                result.append("{\n")
+                indent++
+                result.append("    ".repeat(indent))
+            }
+            "}" -> {
+                indent = (indent - 1).coerceAtLeast(0)
+                if (!result.endsWith("\n")) result.append("\n")
+                result.append("    ".repeat(indent)).append("}")
+                when (next) {
+                    "else", "catch", "finally" -> result.append(" ")
+                    ")", ";", "," -> {}
+                    null -> {}
+                    else -> result.append("\n").append("    ".repeat(indent))
+                }
+            }
+            ";" -> {
+                result.append(";")
+                if (next !in setOf(")", "}") && next != null) {
+                    result.append("\n").append("    ".repeat(indent))
+                }
+            }
+            "," -> {
+                result.append(",")
+                if (next != null) result.append(" ")
+            }
+            ".", "(", ")", "[", "]" -> {
+                result.append(token)
+            }
+            else -> {
+                when {
+                    token.startsWith("//") -> {
+                        result.append(token).append("\n")
+                        if (next != null) result.append("    ".repeat(indent))
+                    }
+                    token.startsWith("/*") -> {
+                        result.append(token)
+                        if (next != null) result.append(" ")
+                    }
+                    token.isBlank() -> {}
+                    else -> {
+                        val needsSpaceBefore = prev != null &&
+                            prev !in setOf("{", "(", "[", ".", ",") &&
+                            !prev.startsWith("//") && !prev.startsWith("/*") &&
+                            !result.endsWith(" ") && !result.endsWith("\n")
 
-        if (trimmed.startsWith("}") || trimmed.startsWith("]") || trimmed.startsWith(")")) {
-            lineIndent = (indent - 1).coerceAtLeast(0)
-        }
-
-        result.append(" ".repeat(lineIndent)).appendLine(trimmed)
-
-        for (char in trimmed) {
-            when (char) {
-                '{', '[', '(' -> indent++
-                '}', ']', ')' -> indent = (indent - 1).coerceAtLeast(0)
+                        if (needsSpaceBefore) result.append(" ")
+                        result.append(token)
+                    }
+                }
             }
         }
     }
 
-    return result.toString().trimEnd()
+    return result.toString().lines().filter { it.isNotBlank() }.joinToString("\n")
+}
+
+private fun tokenizeForFormat(script: String): List<String> {
+    val tokens = mutableListOf<String>()
+    var i = 0
+
+    while (i < script.length) {
+        when {
+            script.startsWith("//", i) -> {
+                val end = script.indexOf('\n', i).let { if (it == -1) script.length else it }
+                tokens.add(script.substring(i, end))
+                i = end
+            }
+            script.startsWith("/*", i) -> {
+                val end = script.indexOf("*/", i + 2).let { if (it == -1) script.length else it + 2 }
+                tokens.add(script.substring(i, end))
+                i = end
+            }
+            script[i] == '"' || script[i] == '\'' || script[i] == '`' -> {
+                val quote = script[i]
+                val start = i++
+                while (i < script.length) {
+                    if (script[i] == '\\' && i + 1 < script.length) {
+                        i += 2
+                    } else if (script[i] == quote) {
+                        i++
+                        break
+                    } else {
+                        i++
+                    }
+                }
+                tokens.add(script.substring(start, i))
+            }
+            script[i] in "{}[]();,." -> {
+                tokens.add(script[i].toString())
+                i++
+            }
+            script[i].isWhitespace() -> {
+                i++
+            }
+            script[i].isLetterOrDigit() || script[i] == '_' || script[i] == '$' -> {
+                val start = i
+                while (i < script.length && (script[i].isLetterOrDigit() || script[i] == '_' || script[i] == '$')) {
+                    i++
+                }
+                tokens.add(script.substring(start, i))
+            }
+            else -> {
+                val start = i
+                while (i < script.length && !script[i].isWhitespace() &&
+                       script[i] !in "{}[]();,.'\"`" &&
+                       !script[i].isLetterOrDigit() && script[i] != '_' && script[i] != '$') {
+                    i++
+                }
+                tokens.add(script.substring(start, i))
+            }
+        }
+    }
+
+    return tokens
 }
