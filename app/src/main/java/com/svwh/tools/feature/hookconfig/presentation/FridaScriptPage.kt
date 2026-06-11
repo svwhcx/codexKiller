@@ -1127,6 +1127,7 @@ private fun FridaCodeEditor(
                             awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
                             var previousDistance = 0f
                             var gestureFontSize = latestFontSize
+                            var pinchCenterY = 0f
                             var hasPressedPointers = true
                             try {
                                 do {
@@ -1138,15 +1139,32 @@ private fun FridaCodeEditor(
                                             first = pressed[0].position,
                                             second = pressed[1].position,
                                         )
+                                        val centerY = (pressed[0].position.y + pressed[1].position.y) / 2f
+
                                         if (previousDistance > 0f && distance > 0f) {
                                             val zoomChange = distance / previousDistance
                                             if (abs(zoomChange - 1f) > 0.008f) {
+                                                val oldFontSize = gestureFontSize
                                                 gestureFontSize = (gestureFontSize * zoomChange)
                                                     .coerceIn(FridaEditorMinFontSize, FridaEditorMaxFontSize)
                                                 fontSize = gestureFontSize
+
+                                                val oldLineHeight = oldFontSize * FridaEditorLineHeightMultiplier
+                                                val newLineHeight = gestureFontSize * FridaEditorLineHeightMultiplier
+                                                val scrollOffset = verticalScrollState.value.toFloat()
+                                                val contentOffsetY = scrollOffset + pinchCenterY
+                                                val scaleFactor = newLineHeight / oldLineHeight
+                                                val newContentOffsetY = contentOffsetY * scaleFactor
+                                                val newScrollOffset = (newContentOffsetY - pinchCenterY)
+                                                    .coerceIn(0f, verticalScrollState.maxValue.toFloat())
+
+                                                coroutineScope.launch {
+                                                    verticalScrollState.scrollTo(newScrollOffset.toInt())
+                                                }
                                             }
                                         }
                                         previousDistance = distance
+                                        pinchCenterY = centerY
                                         isPinching = true
                                         pressed.forEach { it.consume() }
                                     } else {
