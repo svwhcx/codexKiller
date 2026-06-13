@@ -201,7 +201,17 @@ internal class FridaScriptViewModel @Inject constructor(
                     enabled = !item.enabled,
                 )
             ) {
-                is AppResult.Success -> loadScripts()
+                is AppResult.Success -> {
+                    // 只更新本地状态，不重新加载列表（避免重排序）
+                    val updatedItems = _uiState.value.items.map { existingItem ->
+                        if (existingItem.id == item.id) {
+                            existingItem.copy(enabled = !item.enabled)
+                        } else {
+                            existingItem
+                        }
+                    }
+                    _uiState.value = _uiState.value.copy(items = updatedItems)
+                }
                 is AppResult.Failure -> {
                     _uiState.value = _uiState.value.copy(errorMessage = ERROR_UPDATE_SCRIPT_SWITCH)
                 }
