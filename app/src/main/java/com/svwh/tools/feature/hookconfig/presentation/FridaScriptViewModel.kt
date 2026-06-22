@@ -290,7 +290,8 @@ internal class FridaScriptViewModel @Inject constructor(
     fun importGlobalScript(item: FridaScriptItem) {
         val state = _uiState.value
         if (state.packageName.isBlank() || state.envType.isBlank()) return
-        val importedName = uniqueImportedName(item.name, state.items)
+        val usedNames = state.items.map { it.name.trim() }.toMutableSet()
+        val importedName = uniqueImportedName(item.name, usedNames)
         viewModelScope.launch {
             when (
                 val result = repository.saveScript(
@@ -317,6 +318,37 @@ internal class FridaScriptViewModel @Inject constructor(
         }
     }
 
+    fun importGlobalScripts(items: List<FridaScriptItem>) {
+        val state = _uiState.value
+        if (state.packageName.isBlank() || state.envType.isBlank() || items.isEmpty()) return
+        val usedNames = state.items.map { it.name.trim() }.toMutableSet()
+        val drafts = items.map { item ->
+            FridaScriptDraft(
+                packageName = state.packageName,
+                envType = state.envType,
+                name = uniqueImportedName(item.name, usedNames),
+                scriptContent = item.scriptContent,
+                enabled = item.enabled,
+            )
+        }
+        viewModelScope.launch {
+            for (draft in drafts) {
+                when (val result = repository.saveScript(draft)) {
+                    is AppResult.Success -> Unit
+                    is AppResult.Failure -> {
+                        _uiState.value = _uiState.value.copy(errorMessage = result.error.toUserMessage())
+                        return@launch
+                    }
+                }
+            }
+            _uiState.value = _uiState.value.copy(
+                showImportDialog = false,
+                errorMessage = null,
+            )
+            loadScripts()
+        }
+    }
+
     private fun validateDraftForSave(
         draft: FridaScriptDraft,
         existingItems: List<FridaScriptItem>,
@@ -332,15 +364,14 @@ internal class FridaScriptViewModel @Inject constructor(
 
     private fun uniqueImportedName(
         baseName: String,
-        existingItems: List<FridaScriptItem>,
+        usedNames: MutableSet<String>,
     ): String {
-        val names = existingItems.map { it.name.trim() }.toSet()
         val trimmed = baseName.trim().ifBlank { "Imported Script" }
-        if (trimmed !in names) return trimmed
+        if (usedNames.add(trimmed)) return trimmed
         var index = 2
         while (true) {
             val candidate = "$trimmed ($index)"
-            if (candidate !in names) return candidate
+            if (usedNames.add(candidate)) return candidate
             index++
         }
     }

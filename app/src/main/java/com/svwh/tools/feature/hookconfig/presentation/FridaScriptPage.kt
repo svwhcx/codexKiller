@@ -149,6 +149,7 @@ private const val TEXT_ADD_FRIDA = "添加脚本"
 private const val TEXT_IMPORT_FRIDA = "导入脚本"
 private const val TEXT_IMPORT_TITLE = "从全局脚本库导入"
 private const val TEXT_IMPORT_EMPTY = "暂无全局 Frida 脚本"
+private const val TEXT_IMPORT_SELECTED = "导入已选"
 private const val TEXT_SELECT_ALL = "全选"
 private const val TEXT_REVERSE_SELECT = "反选"
 private const val TEXT_DELETE = "删除"
@@ -413,9 +414,9 @@ internal fun FridaScriptPage(
         FridaImportDialog(
             items = uiState.globalItems,
             onDismiss = viewModel::closeImportDialog,
-            onImport = { item ->
+            onImport = { items ->
                 storagePermissionGate.runAfterPermission {
-                    viewModel.importGlobalScript(item)
+                    viewModel.importGlobalScripts(items)
                 }
             },
         )
@@ -650,8 +651,13 @@ private fun FridaBottomActionButton(
 private fun FridaImportDialog(
     items: List<FridaScriptItem>,
     onDismiss: () -> Unit,
-    onImport: (FridaScriptItem) -> Unit,
+    onImport: (List<FridaScriptItem>) -> Unit,
 ) {
+    var selectedIds by remember(items) { mutableStateOf(emptySet<Long>()) }
+    val selectedItems = remember(items, selectedIds) {
+        items.filter { it.id in selectedIds }
+    }
+
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(
@@ -687,6 +693,28 @@ private fun FridaImportDialog(
                         textAlign = TextAlign.Center,
                     )
                 } else {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        FridaSelectionActionButton(
+                            text = TEXT_SELECT_ALL,
+                            icon = Icons.Outlined.SelectAll,
+                            onClick = {
+                                selectedIds = items.map { it.id }.toSet()
+                            },
+                            modifier = Modifier.weight(1f),
+                        )
+                        FridaSelectionActionButton(
+                            text = TEXT_REVERSE_SELECT,
+                            icon = Icons.Outlined.DoneAll,
+                            onClick = {
+                                val current = selectedIds
+                                selectedIds = items.map { it.id }.filterNot { it in current }.toSet()
+                            },
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
                     LazyColumn(
                         modifier = Modifier.heightIn(max = 360.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -694,9 +722,28 @@ private fun FridaImportDialog(
                         itemsIndexed(items, key = { _, item -> item.id }) { _, item ->
                             FridaImportItem(
                                 item = item,
-                                onClick = { onImport(item) },
+                                selected = item.id in selectedIds,
+                                onCheckedChange = {
+                                    selectedIds = if (item.id in selectedIds) {
+                                        selectedIds - item.id
+                                    } else {
+                                        selectedIds + item.id
+                                    }
+                                },
                             )
                         }
+                    }
+                    Button(
+                        onClick = { onImport(selectedItems) },
+                        enabled = selectedItems.isNotEmpty(),
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(8.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = HookConfigPrimaryBlue),
+                    ) {
+                        Text(
+                            text = "$TEXT_IMPORT_SELECTED (${selectedItems.size})",
+                            fontWeight = FontWeight.SemiBold,
+                        )
                     }
                 }
             }
@@ -707,34 +754,45 @@ private fun FridaImportDialog(
 @Composable
 private fun FridaImportItem(
     item: FridaScriptItem,
-    onClick: () -> Unit,
+    selected: Boolean,
+    onCheckedChange: () -> Unit,
 ) {
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
+            .clickable(onClick = onCheckedChange),
         shape = RoundedCornerShape(8.dp),
         color = FridaPageBg,
     ) {
-        Column(
+        Row(
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                text = item.name,
-                color = FridaTitle,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
+            Checkbox(
+                checked = selected,
+                onCheckedChange = { onCheckedChange() },
             )
-            Text(
-                text = item.scriptContent.ifBlank { TEXT_SCRIPT_EMPTY_PREVIEW },
-                color = FridaSubtitle,
-                style = MaterialTheme.typography.bodySmall,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Text(
+                    text = item.name,
+                    color = FridaTitle,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text = item.scriptContent.ifBlank { TEXT_SCRIPT_EMPTY_PREVIEW },
+                    color = FridaSubtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
         }
     }
 }
