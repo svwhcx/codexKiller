@@ -8,10 +8,8 @@ import org.jf.dexlib2.Opcodes
 import org.jf.dexlib2.dexbacked.DexBackedDexFile
 import org.jf.dexlib2.dexbacked.ZipDexContainer
 import org.jf.dexlib2.iface.ClassDef
-import org.jf.dexlib2.iface.DexFile
 import org.jf.dexlib2.iface.Method
 import org.jf.dexlib2.iface.MultiDexContainer
-import org.jf.dexlib2.iface.MultiDexContainer.DexEntry
 import org.jf.dexlib2.rewriter.DexRewriter
 import org.jf.dexlib2.rewriter.Rewriter
 import org.jf.dexlib2.rewriter.RewriterModule
@@ -40,20 +38,27 @@ class DexModification : IApkModification {
         // 2. 查找对应的application在哪一个dex中
         val container = ZipDexContainer(File(apkProcessorContext.apkPath), Opcodes.getDefault())
 
-        // 3. 找到继承链的顶层类（直接继承 android.app.Application 的类）
-        val topLevelAppClass = findTopLevelApplicationClass(container, apkProcessorContext) ?: return this
+        // 3. 找到 Application 继承链
+        val applicationClassChain = findApplicationClassChain(container, apkProcessorContext)
+        if (applicationClassChain.isEmpty()) {
+            return this
+        }
+        val topLevelAppClass = applicationClassChain.last()
 
-        // 4. 找到顶层类所在的 DEX
-        val targetDexEntry = resolveDexForClass(container, topLevelAppClass) ?: return this
-        val dexFile = targetDexEntry.dexFile
-
-        // 5. 通过dex工具修改对应的dex中的Application
+        // 4. 通过dex工具修改对应的dex中的Application
         val smaliApplicationName = MethodSignatureUtil.convertSmaliSignature(noEnvHookApplication)
         val smaliTopLevelClass = MethodSignatureUtil.convertSmaliSignature(topLevelAppClass)
+        val smaliApplicationClassChain = applicationClassChain
+            .map { MethodSignatureUtil.convertSmaliSignature(it) }
+            .toSet()
 
         val methodRewriter = DexRewriter(object : RewriterModule() {
             override fun getMethodRewriter(rewriters: Rewriters): Rewriter<Method> {
-                return MethodChangeWriter(smaliApplicationName)
+                return MethodChangeWriter(
+                    superClazz = smaliApplicationName,
+                    clearOnCreate = true,
+                    injectAttachBootstrap = true,
+                )
             }
         })
 
@@ -63,54 +68,50 @@ class DexModification : IApkModification {
             }
         })
 
-        val dexPool = DexPool(dexFile.opcodes)
-        dexFile.classes.forEach {
-            if (it.type == smaliTopLevelClass) {
-                apkProcessorContext.originSuperClass = it.superclass!!
-                val methodRewrite = methodRewriter.classDefRewriter.rewrite(it)
-                val classRewrite = classRewriter.classDefRewriter.rewrite(methodRewrite)
-                dexPool.internClass(classRewrite)
-            } else {
-                dexPool.internClass(it)
+        for (dexEntryName in container.dexEntryNames) {
+            val dexEntry = container.getEntry(dexEntryName!!) ?: continue
+            val dexFile = dexEntry.dexFile
+            var modified = false
+            val dexPool = DexPool(dexFile.opcodes)
+            dexFile.classes.forEach { classDef ->
+                if (classDef.type in smaliApplicationClassChain) {
+                    modified = true
+                    val methodRewrite = methodRewriter.classDefRewriter.rewrite(classDef)
+                    val classRewrite = if (classDef.type == smaliTopLevelClass) {
+                        apkProcessorContext.originSuperClass = classDef.superclass!!
+                        classRewriter.classDefRewriter.rewrite(methodRewrite)
+                    } else {
+                        methodRewrite
+                    }
+                    dexPool.internClass(classRewrite)
+                } else {
+                    dexPool.internClass(classDef)
+                }
+            }
+
+            if (modified) {
+                val dataStore = MemoryDataStore()
+                dexPool.writeTo(dataStore)
+                apkProcessorContext.extraDataNodes.add(
+                    ExtraDataNode(
+                        dexEntry.entryName,
+                        ByteArrayInputStream(dataStore.data)
+                    )
+                )
             }
         }
-        val dataStore = MemoryDataStore()
-        dexPool.writeTo(dataStore)
-        apkProcessorContext.extraDataNodes.add(
-            ExtraDataNode(
-                targetDexEntry.entryName,
-                ByteArrayInputStream(dataStore.data)
-            )
-        )
         return this
     }
 
-
-    private fun resolveDexForClass(
-        container: MultiDexContainer<out DexBackedDexFile>,
-        className: String
-    ): DexEntry<out DexFile>? {
-        val smaliClassName = MethodSignatureUtil.convertSmaliSignature(className)
-        for (dexEntryName in container.dexEntryNames) {
-            val dexEntry = container.getEntry(dexEntryName!!)
-            for (classDef in dexEntry!!.dexFile.classes) {
-                if (classDef.type == smaliClassName) {
-                    return dexEntry
-                }
-            }
-        }
-        return null
-    }
-
     /**
-     * 找到继承链的顶层类（直接继承 android.app.Application 的类）
-     * 例如：MyApp -> BaseApp -> Application，返回 BaseApp
+     * 找到 Application 继承链。
+     * 例如：MyApp -> BaseApp -> Application，返回 [MyApp, BaseApp]
      * 支持跨多个 DEX 文件的继承链查找
      */
-    private fun findTopLevelApplicationClass(
+    private fun findApplicationClassChain(
         container: MultiDexContainer<out DexBackedDexFile>,
         apkProcessorContext: ApkProcessorContext
-    ): String? {
+    ): List<String> {
         val startClass = apkProcessorContext.applicationName
         val androidAppClass = apkProcessorContext.androidApplication
         val smaliAndroidApp = MethodSignatureUtil.convertSmaliSignature(androidAppClass)
@@ -125,25 +126,30 @@ class DexModification : IApkModification {
         }
 
         var currentClassName = MethodSignatureUtil.convertSmaliSignature(startClass)
-        var topLevelClass: String? = null
+        val classChain = mutableListOf<String>()
+        var reachedAndroidApplication = false
 
         // 向上追踪继承链
         while (currentClassName != smaliAndroidApp) {
             val classDef = classMap[currentClassName] ?: break
             val superClass = classDef.superclass ?: break
+            classChain += currentClassName
 
             // 如果父类是 android.app.Application，当前类就是顶层类
             if (superClass == smaliAndroidApp) {
-                topLevelClass = currentClassName
+                reachedAndroidApplication = true
                 break
             }
 
             // 继续向上查找
             currentClassName = superClass
         }
+        if (!reachedAndroidApplication) {
+            return emptyList()
+        }
 
         // 转换回 Java 类名格式：Lcom/example/App; -> com.example.App
-        return topLevelClass?.let { smaliName ->
+        return classChain.map { smaliName ->
             smaliName.removePrefix("L").removeSuffix(";").replace("/", ".")
         }
     }

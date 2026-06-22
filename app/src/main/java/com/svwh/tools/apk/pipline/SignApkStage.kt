@@ -14,14 +14,35 @@ import java.io.File
  * @Author chenxin
  * @Date 2025/7/31 23:56
  */
-class SignApkStage: AbstractApkProcessor() {
-
+class SignApkStage : AbstractApkProcessor() {
 
     override fun doProcess(apkProcessorContext: ApkProcessorContext): ApkProcessorContext {
         setCurrentProcessor(this)
         val signConfig = apkProcessorContext.apkModificationConfig.signConfig
         val signApkPath = apkProcessorContext.apkModificationConfig.apkSavePath.replace(".apk", "_sign.apk")
-        val newApkFile = File(apkProcessorContext.apkModificationConfig.apkSavePath)
+        val unsignedApk = File(apkProcessorContext.apkModificationConfig.apkSavePath)
+        val signedApk = File(signApkPath)
+
+        signOnce(apkProcessorContext, signConfig, unsignedApk, signedApk)
+
+        unsignedApk.delete()
+        val completedEvent = ProcessEvent(ProcessEventType.END, "签名完成", "", ProcessEventResult.SUCCESS)
+        apkProcessorContext.dispatchEvent(completedEvent)
+        return apkProcessorContext
+    }
+
+    /**
+     * 执行停止写出操作
+     */
+    override fun doStop() {
+    }
+
+    private fun signOnce(
+        apkProcessorContext: ApkProcessorContext,
+        signConfig: SignConfig,
+        inputApk: File,
+        outputApk: File,
+    ) {
         openKeyStore(apkProcessorContext, signConfig).use { keyStore ->
             SignUtils.signApk(
                 key = keyStore,
@@ -29,21 +50,10 @@ class SignApkStage: AbstractApkProcessor() {
                 storePassword = signConfig.storePassword,
                 keyPassword = signConfig.keyPassword,
                 alias = signConfig.alias,
-                inputApk = newApkFile,
-                output = File(signApkPath),
+                inputApk = inputApk,
+                output = outputApk,
             )
         }
-        newApkFile.delete()
-        val completedEvent = ProcessEvent(ProcessEventType.END, "签名完成", "", ProcessEventResult.SUCCESS)
-        apkProcessorContext.dispatchEvent(completedEvent)
-        return apkProcessorContext
-    }
-
-    /**
-     * 执行停止写出的操作
-     */
-    override fun doStop() {
-
     }
 
     private fun openKeyStore(
@@ -61,4 +71,5 @@ class SignApkStage: AbstractApkProcessor() {
                 ?: error("无法打开自定义签名密钥文件")
         }
     }
+
 }

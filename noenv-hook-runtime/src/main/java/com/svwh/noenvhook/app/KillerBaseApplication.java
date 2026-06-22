@@ -6,7 +6,6 @@ import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
-import android.widget.Toast;
 
 import com.svwh.noenvhook.runtime.FridaRuntimeConfig;
 import com.svwh.noenvhook.runtime.HookRuntime;
@@ -27,19 +26,27 @@ public class KillerBaseApplication extends Application {
 
     private static final AtomicBoolean nativeHookLoaded = new AtomicBoolean(false);
 
-    private static void scheduleNativeHookLibraryLoad(Context context) {
+    private static final AtomicBoolean hookRuntimeStarted = new AtomicBoolean(false);
+
+    private static void prepareNativeHookLibraryLoad(Context context) {
+        long delayMillis = FridaRuntimeConfig.delayInjectMillis(context);
+        if (delayMillis > 0L) {
+            scheduleNativeHookLibraryLoad(delayMillis);
+            return;
+        }
+        loadNativeHookLibrary();
+    }
+
+    private static void scheduleNativeHookLibraryLoad(long delayMillis) {
+        if (nativeHookLoaded.get()) {
+            return;
+        }
         if (!nativeHookLoadScheduled.compareAndSet(false, true)) {
             return;
         }
 
-        final Context appContext = context.getApplicationContext() != null
-                ? context.getApplicationContext()
-                : context;
-        new Thread(() -> {
-            final long delayMillis = FridaRuntimeConfig.delayInjectMillis(appContext);
-            Handler handler = new Handler(Looper.getMainLooper());
-            handler.postDelayed(KillerBaseApplication::loadNativeHookLibrary, delayMillis);
-        }, "STool-FridaInjectDelay").start();
+        Handler handler = new Handler(Looper.getMainLooper());
+        handler.postDelayed(KillerBaseApplication::loadNativeHookLibrary, delayMillis);
     }
 
     private static void loadNativeHookLibrary() {
@@ -54,20 +61,29 @@ public class KillerBaseApplication extends Application {
         }
     }
 
+    private static void startHookRuntime(Context context) {
+        if (!hookRuntimeStarted.compareAndSet(false, true)) {
+            return;
+        }
+        hookEnable = new HookRuntime().start(context);
+    }
+
+    public static void beforeAttachBaseContext(Context base) {
+        context = base;
+        prepareNativeHookLibraryLoad(base);
+        startHookRuntime(base);
+    }
+
     @Override
     public void onCreate() {
         super.onCreate();
-        hookEnable = new HookRuntime().start(this);
-        if (hookEnable) {
-            Toast.makeText(this, "开始 Hook", Toast.LENGTH_SHORT).show();
-        }
     }
 
     @Override
     protected void attachBaseContext(Context base) {
-        super.attachBaseContext(base);
         context = base;
         application = this;
-        scheduleNativeHookLibraryLoad(base);
+        beforeAttachBaseContext(base);
+        super.attachBaseContext(base);
     }
 }
