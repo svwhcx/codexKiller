@@ -109,6 +109,9 @@ private const val TEXT_EMPTY = "暂无配置"
 private const val TEXT_SELECT_ALL = "全选"
 private const val TEXT_REVERSE_SELECT = "反选"
 private const val TEXT_DELETE = "删除"
+private const val TEXT_DELETE_CONFIRM_TITLE = "确认删除"
+private const val TEXT_DELETE_CONFIRM_MESSAGE = "删除后无法恢复，确定要删除选中的配置吗？"
+private const val TEXT_CONFIRM = "确认"
 private const val TEXT_CANCEL = "取消"
 private const val TEXT_ADD_CONFIG = "添加配置"
 private const val TEXT_BACK = "返回"
@@ -172,6 +175,7 @@ internal fun UserHookConfigPage(
     val uiState by viewModel.uiState.collectAsState()
     val lifecycleOwner = LocalLifecycleOwner.current
     val storagePermissionGate = rememberExternalStoragePermissionGate(onPermissionDenied)
+    var showDeleteConfirmDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(envType, packageName) {
         viewModel.initialize(envType = envType, packageName = packageName)
@@ -273,11 +277,7 @@ internal fun UserHookConfigPage(
                     SelectionActionButton(
                         text = TEXT_DELETE,
                         icon = Icons.Outlined.DeleteOutline,
-                        onClick = {
-                            storagePermissionGate.runAfterPermission {
-                                viewModel.deleteSelected()
-                            }
-                        },
+                        onClick = { showDeleteConfirmDialog = true },
                         modifier = Modifier.weight(1f),
                         contentColor = UserConfigDeleteRed,
                     )
@@ -315,6 +315,98 @@ internal fun UserHookConfigPage(
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 14.sp,
                     )
+                }
+            }
+        }
+    }
+
+    if (showDeleteConfirmDialog) {
+        UserConfigConfirmDeleteDialog(
+            message = TEXT_DELETE_CONFIRM_MESSAGE,
+            onDismiss = { showDeleteConfirmDialog = false },
+            onConfirm = {
+                storagePermissionGate.runAfterPermission {
+                    viewModel.deleteSelected()
+                    showDeleteConfirmDialog = false
+                }
+            },
+        )
+    }
+}
+
+@Composable
+private fun UserConfigConfirmDeleteDialog(
+    message: String,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit,
+) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(
+            dismissOnBackPress = true,
+            dismissOnClickOutside = true,
+        ),
+    ) {
+        Card(
+            shape = RoundedCornerShape(18.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp),
+            colors = CardDefaults.cardColors(containerColor = UserConfigCardBg),
+        ) {
+            Column(
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Text(
+                    text = TEXT_DELETE_CONFIRM_TITLE,
+                    color = UserConfigTitle,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Text(
+                    text = message,
+                    color = UserConfigSubtitle,
+                    style = MaterialTheme.typography.bodyMedium,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 2.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    Button(
+                        onClick = onDismiss,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(44.dp),
+                        shape = RoundedCornerShape(8.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = UserConfigEditorBg,
+                            contentColor = UserConfigTitle,
+                        ),
+                        elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp),
+                    ) {
+                        Text(text = TEXT_CANCEL, fontWeight = FontWeight.SemiBold)
+                    }
+                    Button(
+                        onClick = onConfirm,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(44.dp),
+                        shape = RoundedCornerShape(8.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = UserConfigDeleteRed,
+                            contentColor = Color.White,
+                        ),
+                        elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp),
+                    ) {
+                        Text(text = TEXT_CONFIRM, fontWeight = FontWeight.SemiBold)
+                    }
                 }
             }
         }

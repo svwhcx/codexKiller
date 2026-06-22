@@ -153,6 +153,9 @@ private const val TEXT_IMPORT_SELECTED = "导入已选"
 private const val TEXT_SELECT_ALL = "全选"
 private const val TEXT_REVERSE_SELECT = "反选"
 private const val TEXT_DELETE = "删除"
+private const val TEXT_DELETE_CONFIRM_TITLE = "确认删除"
+private const val TEXT_DELETE_CONFIRM_MESSAGE = "删除后无法恢复，确定要删除选中的脚本吗？"
+private const val TEXT_CONFIRM = "确认"
 private const val TEXT_CANCEL = "取消"
 private const val TEXT_BACK = "返回"
 private const val TEXT_SAVE = "保存"
@@ -243,6 +246,7 @@ internal fun FridaScriptPage(
     val uiState by viewModel.uiState.collectAsState()
     val lifecycleOwner = LocalLifecycleOwner.current
     val storagePermissionGate = rememberExternalStoragePermissionGate(onPermissionDenied)
+    var showDeleteConfirmDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(envType, packageName) {
         viewModel.initialize(envType = envType, packageName = packageName)
@@ -360,11 +364,7 @@ internal fun FridaScriptPage(
                     FridaSelectionActionButton(
                         text = TEXT_DELETE,
                         icon = Icons.Outlined.DeleteOutline,
-                        onClick = {
-                            storagePermissionGate.runAfterPermission {
-                                viewModel.deleteSelected()
-                            }
-                        },
+                        onClick = { showDeleteConfirmDialog = true },
                         modifier = Modifier.weight(1f),
                         contentColor = FridaErrorText,
                     )
@@ -410,6 +410,19 @@ internal fun FridaScriptPage(
         }
     }
 
+    if (showDeleteConfirmDialog) {
+        ConfirmDeleteDialog(
+            message = TEXT_DELETE_CONFIRM_MESSAGE,
+            onDismiss = { showDeleteConfirmDialog = false },
+            onConfirm = {
+                storagePermissionGate.runAfterPermission {
+                    viewModel.deleteSelected()
+                    showDeleteConfirmDialog = false
+                }
+            },
+        )
+    }
+
     if (uiState.showImportDialog) {
         FridaImportDialog(
             items = uiState.globalItems,
@@ -420,6 +433,83 @@ internal fun FridaScriptPage(
                 }
             },
         )
+    }
+}
+
+@Composable
+private fun ConfirmDeleteDialog(
+    message: String,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit,
+) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(
+            dismissOnBackPress = true,
+            dismissOnClickOutside = true,
+        ),
+    ) {
+        Card(
+            shape = RoundedCornerShape(18.dp),
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = FridaCardBg),
+        ) {
+            Column(
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Text(
+                    text = TEXT_DELETE_CONFIRM_TITLE,
+                    color = FridaTitle,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Text(
+                    text = message,
+                    color = FridaSubtitle,
+                    style = MaterialTheme.typography.bodyMedium,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 2.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    Button(
+                        onClick = onDismiss,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(44.dp),
+                        shape = RoundedCornerShape(8.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = FridaEditorBg,
+                            contentColor = FridaTitle,
+                        ),
+                        elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp),
+                    ) {
+                        Text(text = TEXT_CANCEL, fontWeight = FontWeight.SemiBold)
+                    }
+                    Button(
+                        onClick = onConfirm,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(44.dp),
+                        shape = RoundedCornerShape(8.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = FridaErrorText,
+                            contentColor = Color.White,
+                        ),
+                        elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp),
+                    ) {
+                        Text(text = TEXT_CONFIRM, fontWeight = FontWeight.SemiBold)
+                    }
+                }
+            }
+        }
     }
 }
 

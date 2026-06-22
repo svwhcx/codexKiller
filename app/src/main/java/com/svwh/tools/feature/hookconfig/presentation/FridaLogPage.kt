@@ -97,6 +97,8 @@ internal fun FridaLogPage(
     val uiState by viewModel.uiState.collectAsState()
     val userSettings by settingsViewModel.uiState.collectAsStateWithLifecycle()
     var showLevelFilterDialog by rememberSaveable { mutableStateOf(false) }
+    var showDeleteSelectedConfirmDialog by rememberSaveable { mutableStateOf(false) }
+    var showClearLogsConfirmDialog by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(packageName) {
         viewModel.initialize(packageName = packageName)
@@ -116,9 +118,9 @@ internal fun FridaLogPage(
             onSearchClick = viewModel::submitSearch,
             onRefreshClick = viewModel::refresh,
             onOpenLevelFilter = { showLevelFilterDialog = true },
-            onClearLogs = viewModel::clearLogs,
+            onClearLogs = { showClearLogsConfirmDialog = true },
             onSelectAll = viewModel::selectAllVisible,
-            onDeleteSelected = viewModel::deleteSelectedLogs,
+            onDeleteSelected = { showDeleteSelectedConfirmDialog = true },
             onCancelSelection = viewModel::clearSelection,
             isCompactStyle = userSettings.fridaLogCompactStyle,
             onCompactStyleChange = settingsViewModel::setFridaLogCompactStyle,
@@ -210,6 +212,108 @@ internal fun FridaLogPage(
                 viewModel.applySelectedLevels(selectedLevels)
             },
         )
+    }
+
+    if (showDeleteSelectedConfirmDialog) {
+        FridaLogConfirmDeleteDialog(
+            message = "删除后无法恢复，确定要删除选中的日志吗？",
+            onDismiss = { showDeleteSelectedConfirmDialog = false },
+            onConfirm = {
+                viewModel.deleteSelectedLogs()
+                showDeleteSelectedConfirmDialog = false
+            },
+        )
+    }
+
+    if (showClearLogsConfirmDialog) {
+        FridaLogConfirmDeleteDialog(
+            message = "清空后无法恢复，确定要清空当前日志吗？",
+            onDismiss = { showClearLogsConfirmDialog = false },
+            onConfirm = {
+                viewModel.clearLogs()
+                showClearLogsConfirmDialog = false
+            },
+        )
+    }
+}
+
+@Composable
+private fun FridaLogConfirmDeleteDialog(
+    message: String,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit,
+) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(
+            dismissOnBackPress = true,
+            dismissOnClickOutside = true,
+        ),
+    ) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp),
+            shape = RoundedCornerShape(18.dp),
+            color = Color.White,
+            tonalElevation = 8.dp,
+        ) {
+            Column(
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Text(
+                    text = "确认删除",
+                    color = FridaLogTextPrimary,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Text(
+                    text = message,
+                    color = FridaLogTextSecondary,
+                    style = MaterialTheme.typography.bodyMedium,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 2.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    Button(
+                        onClick = onDismiss,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(44.dp),
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = FridaLogSheetButtonBg,
+                            contentColor = FridaLogTextPrimary,
+                        ),
+                        elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp),
+                    ) {
+                        Text(text = "取消", fontWeight = FontWeight.SemiBold)
+                    }
+                    Button(
+                        onClick = onConfirm,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(44.dp),
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFFE74C3C),
+                            contentColor = Color.White,
+                        ),
+                        elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp),
+                    ) {
+                        Text(text = "确认", fontWeight = FontWeight.SemiBold)
+                    }
+                }
+            }
+        }
     }
 }
 
