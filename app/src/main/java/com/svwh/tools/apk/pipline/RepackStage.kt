@@ -48,9 +48,11 @@ class RepackStage : AbstractApkProcessor() {
             .map { node -> node.nodeName }
             .toSet()
         val writtenNames = mutableSetOf<String>()
+        var nativeLibMethods: Map<String, Int> = emptyMap()
 
         ZipOutputStream(outputStream).use { zipOutputStream ->
             ZipFile(sourceApk).use { zipFile ->
+                nativeLibMethods = zipFile.readNativeLibMethods()
                 zipFile.entries()
                     .asSequenceCompat()
                     .filterNot { entry -> entry.name in extraNodeNames }
@@ -75,6 +77,7 @@ class RepackStage : AbstractApkProcessor() {
                 node.openInputStream().use { inputStream ->
                     zipOutputStream.writeEntry(
                         name = node.nodeName,
+                        sourceMethod = node.nodeName.resolveExtraEntryMethod(nativeLibMethods),
                         inputStream = BufferedInputStream(inputStream),
                     )
                 }
@@ -101,11 +104,12 @@ class RepackStage : AbstractApkProcessor() {
 
     private fun ZipOutputStream.writeEntry(
         name: String,
+        sourceMethod: Int,
         inputStream: InputStream,
     ) {
         writeEntry(
             entry = ZipEntry(name).apply { time = 0L },
-            sourceMethod = ZipEntry.DEFLATED,
+            sourceMethod = sourceMethod,
             inputStream = inputStream,
         )
     }
@@ -116,7 +120,7 @@ class RepackStage : AbstractApkProcessor() {
         inputStream: InputStream,
     ) {
         val bytes = inputStream.readBytes()
-        if (sourceMethod == ZipEntry.STORED || entry.name.shouldStoreWithoutCompression()) {
+        if (sourceMethod == ZipEntry.STORED) {
             entry.method = ZipEntry.STORED
             entry.size = bytes.size.toLong()
             entry.compressedSize = bytes.size.toLong()
@@ -149,11 +153,37 @@ class RepackStage : AbstractApkProcessor() {
         return APK_SIGNATURE_ENTRY_REGEX.matches(this)
     }
 
-    private fun String.shouldStoreWithoutCompression(): Boolean {
-        return endsWith(".so", ignoreCase = true)
+    private fun ZipFile.readNativeLibMethods(): Map<String, Int> {
+        val methods = linkedMapOf<String, Int>()
+        entries().asSequenceCompat().forEach { entry ->
+            val abi = entry.name.nativeLibAbi() ?: return@forEach
+            methods.putIfAbsent(abi, entry.method)
+        }
+        return methods
+    }
+
+    private fun String.resolveExtraEntryMethod(nativeLibMethods: Map<String, Int>): Int {
+        val abi = nativeLibAbi()
+        if (abi != null) {
+            return nativeLibMethods[abi] ?: ZipEntry.DEFLATED
+        }
+        return ZipEntry.DEFLATED
+    }
+
+    private fun String.nativeLibAbi(): String? {
+        if (!startsWith("lib/") || !endsWith(".so", ignoreCase = true)) {
+            return null
+        }
+        val nextSlash = indexOf('/', startIndex = LIB_DIR_PREFIX.length)
+        if (nextSlash <= LIB_DIR_PREFIX.length) {
+            return null
+        }
+        return substring(LIB_DIR_PREFIX.length, nextSlash)
     }
 
     private companion object {
+        const val LIB_DIR_PREFIX = "lib/"
+
         val APK_SIGNATURE_ENTRY_REGEX = Regex(
             """META-INF/[^/]+\.(RSA|DSA|EC|SF|MF)""",
             RegexOption.IGNORE_CASE,
